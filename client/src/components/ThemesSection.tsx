@@ -1,12 +1,16 @@
 import { Card } from "@/components/ui/card";
 import { useState } from "react";
+import princessImage from "@assets/princess_1764138848730.png";
+import dinoImage from "@assets/dino_1764138848726.png";
+import mermaidImage from "@assets/marmaid_1764138848728.png";
+import spaceImage from "@assets/space_1764138848730.png";
 
 //todo: remove mock functionality - replace with real themes from API
 const themes = [
-  { id: 1, name: "Princess Dreams", color: "from-pink-200 to-purple-200" },
-  { id: 2, name: "Dino Adventure", color: "from-green-200 to-lime-200" },
-  { id: 3, name: "Mermaid Splash", color: "from-cyan-200 to-blue-200" },
-  { id: 4, name: "Space Explorer", color: "from-indigo-200 to-purple-300" },
+  { id: 1, name: "Princess Dreams", image: princessImage },
+  { id: 2, name: "Dino Adventure", image: dinoImage },
+  { id: 3, name: "Mermaid Splash", image: mermaidImage },
+  { id: 4, name: "Space Explorer", image: spaceImage },
 ];
 
 export default function ThemesSection() {
@@ -37,12 +41,15 @@ export default function ThemesSection() {
               }}
               data-testid={`card-theme-${theme.id}`}
             >
-              <div className="aspect-square relative">
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${theme.color} transition-transform duration-300 group-hover:scale-105`}
+              <div className="aspect-square relative overflow-hidden">
+                <img
+                  src={theme.image}
+                  alt={theme.name}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 flex items-center justify-center p-4">
-                  <h3 className="text-lg md:text-xl font-semibold text-center text-foreground">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-4">
+                  <h3 className="text-lg md:text-xl font-semibold text-center text-white drop-shadow-lg">
                     {theme.name}
                   </h3>
                 </div>
