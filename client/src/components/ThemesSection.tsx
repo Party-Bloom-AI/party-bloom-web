@@ -7,14 +7,6 @@ const themes = [
   { id: 2, name: "Dino Adventure", color: "from-green-200 to-lime-200" },
   { id: 3, name: "Mermaid Splash", color: "from-cyan-200 to-blue-200" },
   { id: 4, name: "Space Explorer", color: "from-indigo-200 to-purple-300" },
-  { id: 5, name: "Rainbow Picnic", color: "from-yellow-200 to-pink-200" },
-  { id: 6, name: "Jungle Safari", color: "from-lime-200 to-green-300" },
-  { id: 7, name: "Construction Crew", color: "from-orange-200 to-yellow-200" },
-  { id: 8, name: "Enchanted Garden", color: "from-purple-200 to-pink-200" },
-  { id: 9, name: "Superhero Squad", color: "from-red-200 to-orange-200" },
-  { id: 10, name: "Under the Sea", color: "from-blue-200 to-cyan-200" },
-  { id: 11, name: "Teddy Bear Picnic", color: "from-amber-200 to-orange-100" },
-  { id: 12, name: "Unicorn Magic", color: "from-purple-200 to-pink-300" },
 ];
 
 export default function ThemesSection() {
@@ -32,7 +24,7 @@ export default function ThemesSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-4xl mx-auto">
           {themes.map((theme) => (
             <Card
               key={theme.id}
