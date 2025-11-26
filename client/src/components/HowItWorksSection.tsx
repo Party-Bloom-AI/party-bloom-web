@@ -63,11 +63,11 @@ export default function HowItWorksSection() {
                     {step.description}
                   </p>
                 </div>
-                <div className="mt-auto">
+                <div className="mt-auto h-48 md:h-56 overflow-hidden rounded-lg">
                   <img
                     src={step.image}
                     alt={step.title}
-                    className="w-full h-auto rounded-lg"
+                    className={`w-full h-full object-cover ${step.number === 3 ? 'object-bottom' : 'object-center'}`}
                   />
                 </div>
               </div>
