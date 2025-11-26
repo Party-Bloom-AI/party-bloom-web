@@ -28,7 +28,7 @@ export default function PricingSection() {
           <div className="text-center mb-8">
             <h3 className="text-2xl md:text-3xl font-bold mb-2">Free to Try</h3>
             <p className="text-muted-foreground mb-4">
-              Create your first party plan with full access to all features
+              Create your first party decoration plan with full access to all features
             </p>
             <div className="inline-block">
               <p className="text-sm text-muted-foreground mb-6">
