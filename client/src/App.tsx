@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,10 +6,29 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Home from "@/pages/Home";
 import AuthPage from "@/pages/AuthPage";
+import Dashboard from "@/pages/Dashboard";
 import NotFound from "@/pages/not-found";
 
-function Router() {
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect to="/auth" />;
+  }
+
+  return <Component />;
+}
+
+function Router() {
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -23,6 +42,9 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/app">
+        <ProtectedRoute component={Dashboard} />
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );

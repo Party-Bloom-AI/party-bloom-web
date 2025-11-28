@@ -1,13 +1,16 @@
 import { useState } from "react";
+import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sparkles, Mail, Lock, User, ArrowRight, Shield } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
+import { useAuth } from "@/hooks/useAuth";
 import logoImage from "@assets/2_1764136309219.png";
 
 export default function AuthPage() {
+  const { isAuthenticated, isLoading } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -20,6 +23,18 @@ export default function AuthPage() {
     password?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+  
+  if (isAuthenticated) {
+    return <Redirect to="/app" />;
+  }
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
