@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import { Link } from "wouter";
 import logoImage from "@assets/logo_1764136309223.png";
 
 export default function Header() {
@@ -67,14 +68,15 @@ export default function Header() {
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
-            <Button
-              variant="default"
-              size="default"
-              onClick={() => console.log("Get Started clicked")}
-              data-testid="button-get-started"
-            >
-              Get Started
-            </Button>
+            <Link href="/auth">
+              <Button
+                variant="default"
+                size="default"
+                data-testid="button-get-started"
+              >
+                Get Started
+              </Button>
+            </Link>
           </div>
 
           <button
@@ -116,15 +118,16 @@ export default function Header() {
             >
               FAQ
             </button>
-            <Button
-              variant="default"
-              size="default"
-              className="w-full"
-              onClick={() => console.log("Get Started clicked")}
-              data-testid="button-mobile-get-started"
-            >
-              Get Started
-            </Button>
+            <Link href="/auth">
+              <Button
+                variant="default"
+                size="default"
+                className="w-full"
+                data-testid="button-mobile-get-started"
+              >
+                Get Started
+              </Button>
+            </Link>
           </div>
         )}
       </div>
