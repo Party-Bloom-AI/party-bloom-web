@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Home from "@/pages/Home";
 import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
+import LogoutPage from "@/pages/LogoutPage";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/app">
         <ProtectedRoute component={Dashboard} />
       </Route>
+      <Route path="/logout" component={LogoutPage} />
       <Route component={NotFound} />
     </Switch>
   );

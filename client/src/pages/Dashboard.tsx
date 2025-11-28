@@ -82,7 +82,7 @@ export default function Dashboard() {
   });
 
   const handleLogout = () => {
-    window.location.href = "/api/auth/logout";
+    window.location.href = "/api/logout";
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
