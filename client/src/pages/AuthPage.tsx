@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sparkles, Mail, Lock, User, ArrowRight, Shield } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
-import logoImage from "@assets/2_1764136309218.png";
+import logoImage from "@assets/2_1764136309219.png";
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
