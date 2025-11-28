@@ -92,7 +92,6 @@ Important:
           { role: "user", content: combinedPrompt }
         ],
         response_format: { type: "json_object" },
-        temperature: 0.7,
       });
 
       const resultText = response.choices[0]?.message?.content;
