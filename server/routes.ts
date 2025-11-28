@@ -104,14 +104,13 @@ Important:
       let themeImage = "";
       const moodboardImages: string[] = [];
       
-      const generateImage = async (prompt: string, size: "1792x1024" | "1024x1024" = "1024x1024"): Promise<string> => {
+      const generateImage = async (prompt: string, size: "1536x1024" | "1024x1024" = "1024x1024"): Promise<string> => {
         try {
           const imageResponse = await openai.images.generate({
-            model: "dall-e-3",
+            model: "gpt-image-1",
             prompt: `${prompt}. Professional party photography, vibrant colors, celebration atmosphere, high quality, no text, no watermarks, no people.`,
             n: 1,
             size: size,
-            quality: "standard",
           });
           return imageResponse.data?.[0]?.url || "";
         } catch (error) {
@@ -123,7 +122,7 @@ Important:
       if (planResult.themeImagePrompt) {
         themeImage = await generateImage(
           `A beautiful photorealistic kids birthday party room fully decorated: ${planResult.themeImagePrompt}`,
-          "1792x1024"
+          "1536x1024"
         );
       }
 
