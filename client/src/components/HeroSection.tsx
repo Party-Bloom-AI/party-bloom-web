@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 import heroImage from "@assets/6_1764136309222.png";
 
 export default function HeroSection() {
@@ -17,15 +18,16 @@ export default function HeroSection() {
               The antidote to endless Pinterest scrolling for busy parents.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                size="lg"
-                onClick={() => console.log("Plan my party clicked")}
-                data-testid="button-hero-cta"
-                className="text-base px-8 py-6 h-auto"
-              >
-                Plan My Party in 10 Minutes
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+              <Link href="/auth">
+                <Button
+                  size="lg"
+                  data-testid="button-hero-cta"
+                  className="text-base px-8 py-6 h-auto"
+                >
+                  Plan My Party in 10 Minutes
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
               <Button
                 size="lg"
                 variant="outline"

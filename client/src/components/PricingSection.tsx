@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { Link } from "wouter";
 
 const features = [
   "Unlimited theme generations",
@@ -52,14 +53,15 @@ export default function PricingSection() {
             ))}
           </div>
 
-          <Button
-            size="lg"
-            className="w-full text-lg py-6 h-auto"
-            onClick={() => console.log("Start free trial clicked")}
-            data-testid="button-start-free"
-          >
-            Start Planning Your Party
-          </Button>
+          <Link href="/auth">
+            <Button
+              size="lg"
+              className="w-full text-lg py-6 h-auto"
+              data-testid="button-start-free"
+            >
+              Start Planning Your Party
+            </Button>
+          </Link>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
             No credit card required • Takes less than 2 minutes

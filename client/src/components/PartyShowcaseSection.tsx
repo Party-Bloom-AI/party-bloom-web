@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { Link } from "wouter";
 import partyImage from "@assets/5_1764137637746.png";
 
 export default function PartyShowcaseSection() {
@@ -30,15 +31,16 @@ export default function PartyShowcaseSection() {
             Your child's perfect party is just a few clicks away.
           </p>
 
-          <Button
-            size="lg"
-            onClick={() => console.log("Start planning clicked")}
-            data-testid="button-showcase-cta"
-            className="text-base px-8 py-6 h-auto bg-white text-foreground hover:bg-white/90"
-          >
-            Start Planning Now
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+          <Link href="/auth">
+            <Button
+              size="lg"
+              data-testid="button-showcase-cta"
+              className="text-base px-8 py-6 h-auto bg-white text-foreground hover:bg-white/90"
+            >
+              Start Planning Now
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
         </div>
       </div>
     </section>
