@@ -58,13 +58,13 @@ Generate a complete party decoration plan in JSON format with the following stru
   "title": "Theme name (e.g., 'Enchanted Princess Castle')",
   "description": "A 2-3 sentence description of the theme and its mood",
   "colors": ["#hex1", "#hex2", "#hex3", "#hex4"] (4-5 theme colors as hex codes),
-  "themeImagePrompt": "A detailed DALL-E prompt for generating a beautiful party decoration scene that captures this theme. Should describe a photorealistic party setup with decorations, balloons, table settings, and themed elements. Maximum 400 characters.",
-  "moodboardImages": [
-    "https://images.unsplash.com/photo-...",
-    "https://images.unsplash.com/photo-...",
-    "https://images.unsplash.com/photo-...",
-    "https://images.unsplash.com/photo-..."
-  ] (4-6 real Unsplash image URLs that match the theme - use actual unsplash photo IDs),
+  "themeImagePrompt": "A detailed prompt for generating the main hero image - a beautifully decorated party room showing the overall theme. Maximum 350 characters.",
+  "moodboardPrompts": [
+    "Prompt for decorated dessert/cake table with theme elements",
+    "Prompt for balloon arch or backdrop setup",
+    "Prompt for table setting with themed tableware and centerpieces",
+    "Prompt for party favor/gift area with themed decorations"
+  ] (4 distinct prompts, each max 300 characters, showing different decorated areas of a party room),
   "decorItems": [
     {
       "name": "Item name",
@@ -77,8 +77,9 @@ Generate a complete party decoration plan in JSON format with the following stru
 }
 
 Important:
-- The themeImagePrompt should be vivid and specific for generating a party decoration scene
-- Use real, working Unsplash image URLs (format: https://images.unsplash.com/photo-{id}?w=400)
+- All image prompts should describe photorealistic, beautifully decorated party spaces
+- Each moodboard prompt should focus on a different area: dessert table, balloon display, table settings, favor area
+- Include theme-specific colors, decorations, and elements in each prompt
 - Price ranges should be realistic for party decorations
 - Include a mix of essentials (balloons, banners, tableware) and theme-specific items
 - Total cost should accurately sum the individual item ranges
@@ -102,21 +103,38 @@ Important:
       const planResult = JSON.parse(resultText);
 
       let themeImage = "";
+      const moodboardImages: string[] = [];
       
-      if (planResult.themeImagePrompt) {
+      const generateImage = async (prompt: string, size: "1792x1024" | "1024x1024" = "1024x1024"): Promise<string> => {
         try {
           const imageResponse = await openai.images.generate({
             model: "dall-e-3",
-            prompt: `A beautiful, photorealistic party decoration setup: ${planResult.themeImagePrompt}. Professional party photography, vibrant colors, celebration atmosphere, high quality, no text or watermarks.`,
+            prompt: `${prompt}. Professional party photography, vibrant colors, celebration atmosphere, high quality, no text, no watermarks, no people.`,
             n: 1,
-            size: "1792x1024",
+            size: size,
             quality: "standard",
           });
-
-          themeImage = imageResponse.data?.[0]?.url || "";
-        } catch (imageError) {
-          console.error("Error generating theme image:", imageError);
+          return imageResponse.data?.[0]?.url || "";
+        } catch (error) {
+          console.error("Error generating image:", error);
+          return "";
         }
+      };
+
+      if (planResult.themeImagePrompt) {
+        themeImage = await generateImage(
+          `A beautiful photorealistic kids birthday party room fully decorated: ${planResult.themeImagePrompt}`,
+          "1792x1024"
+        );
+      }
+
+      if (planResult.moodboardPrompts && Array.isArray(planResult.moodboardPrompts)) {
+        const moodboardPromises = planResult.moodboardPrompts.slice(0, 4).map((prompt: string) =>
+          generateImage(`Photorealistic decorated party area: ${prompt}`)
+        );
+        
+        const results = await Promise.all(moodboardPromises);
+        moodboardImages.push(...results.filter((url: string) => url !== ""));
       }
 
       const result = {
@@ -124,7 +142,7 @@ Important:
         description: planResult.description,
         colors: planResult.colors,
         themeImage: themeImage,
-        moodboardImages: planResult.moodboardImages,
+        moodboardImages: moodboardImages,
         decorItems: planResult.decorItems,
         totalCostRange: planResult.totalCostRange,
       };
