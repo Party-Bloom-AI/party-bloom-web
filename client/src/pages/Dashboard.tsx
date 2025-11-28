@@ -2,9 +2,10 @@ import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,8 +18,6 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Upload,
-  Type,
-  Palette,
   Sparkles,
   ExternalLink,
   ChevronDown,
@@ -27,6 +26,8 @@ import {
   Loader2,
   ImageIcon,
   X,
+  Palette,
+  Wand2,
 } from "lucide-react";
 import logoImage from "@assets/logo_1764136309223.png";
 import princessTheme from "@assets/princess_1764138848730.png";
@@ -45,6 +46,7 @@ interface ThemeResult {
   title: string;
   description: string;
   colors: string[];
+  themeImage: string;
   moodboardImages: string[];
   decorItems: DecorItem[];
   totalCostRange: string;
@@ -64,15 +66,15 @@ const presetThemes = [
 export default function Dashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("upload");
-  const [ideaText, setIdeaText] = useState("");
+  const [promptText, setPromptText] = useState("");
+  const [inspirationType, setInspirationType] = useState<"template" | "upload">("template");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [result, setResult] = useState<ThemeResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateMutation = useMutation({
-    mutationFn: async (input: { type: string; content: string }) => {
+    mutationFn: async (input: { prompt: string; inspirationType: string; inspirationContent: string }) => {
       const response = await apiRequest("POST", "/api/generate-theme", input);
       return response.json();
     },
@@ -91,42 +93,49 @@ export default function Dashboard() {
       const reader = new FileReader();
       reader.onload = (event) => {
         setUploadedImage(event.target?.result as string);
+        setSelectedTemplate(null);
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplate(templateId);
+    setUploadedImage(null);
+  };
+
   const handleGenerate = () => {
-    let input = { type: "", content: "" };
+    let inspirationContent = "";
     
-    if (activeTab === "upload" && uploadedImage) {
-      input = { type: "image", content: uploadedImage };
-    } else if (activeTab === "idea" && ideaText.trim()) {
-      input = { type: "text", content: ideaText };
-    } else if (activeTab === "templates" && selectedTemplate) {
+    if (inspirationType === "upload" && uploadedImage) {
+      inspirationContent = uploadedImage;
+    } else if (inspirationType === "template" && selectedTemplate) {
       const template = presetThemes.find(t => t.id === selectedTemplate);
       if (template) {
-        input = { type: "template", content: template.prompt };
+        inspirationContent = template.prompt;
       }
     }
 
-    if (input.content) {
-      generateMutation.mutate(input);
+    if (promptText.trim() || inspirationContent) {
+      generateMutation.mutate({
+        prompt: promptText,
+        inspirationType: inspirationType,
+        inspirationContent: inspirationContent,
+      });
     }
   };
 
   const handleNewDecoration = () => {
     setResult(null);
-    setIdeaText("");
+    setPromptText("");
     setUploadedImage(null);
     setSelectedTemplate(null);
-    setActiveTab("upload");
+    setInspirationType("template");
   };
 
-  const canGenerate = 
-    (activeTab === "upload" && uploadedImage) ||
-    (activeTab === "idea" && ideaText.trim()) ||
-    (activeTab === "templates" && selectedTemplate);
+  const canGenerate = promptText.trim() || 
+    (inspirationType === "upload" && uploadedImage) ||
+    (inspirationType === "template" && selectedTemplate);
 
   const userInitials = user?.firstName && user?.lastName 
     ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
@@ -196,95 +205,57 @@ export default function Dashboard() {
             <div>
               <h1 className="text-2xl md:text-3xl font-bold mb-2">Plan Your Party Decorations</h1>
               <p className="text-muted-foreground">
-                Upload a photo, describe your idea, or choose from our templates to get started.
+                Describe your vision and choose visual inspiration to generate the perfect theme.
               </p>
             </div>
 
-            <Card className="p-6">
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-3 mb-6">
-                  <TabsTrigger value="upload" className="gap-2" data-testid="tab-upload">
-                    <Upload className="h-4 w-4" />
-                    <span className="hidden sm:inline">Upload</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="idea" className="gap-2" data-testid="tab-idea">
-                    <Type className="h-4 w-4" />
-                    <span className="hidden sm:inline">Type Idea</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="templates" className="gap-2" data-testid="tab-templates">
-                    <Palette className="h-4 w-4" />
-                    <span className="hidden sm:inline">Templates</span>
-                  </TabsTrigger>
-                </TabsList>
+            <Card className="p-6 space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Wand2 className="h-5 w-5 text-primary" />
+                  <Label className="text-base font-semibold">Describe Your Party Vision</Label>
+                </div>
+                <Textarea
+                  placeholder="Tell us about your dream party... e.g., 'A magical fairy garden party with lots of flowers and butterflies for my 5-year-old daughter who loves pink and purple'"
+                  value={promptText}
+                  onChange={(e) => setPromptText(e.target.value)}
+                  className="min-h-[120px] resize-none"
+                  data-testid="input-prompt-text"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Include details like age, favorite colors, interests, and any must-have elements.
+                </p>
+              </div>
 
-                <TabsContent value="upload" className="space-y-4">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImageUpload}
-                    accept="image/*"
-                    className="hidden"
-                    data-testid="input-file-upload"
-                  />
-                  
-                  {uploadedImage ? (
-                    <div className="relative">
-                      <img 
-                        src={uploadedImage} 
-                        alt="Uploaded" 
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="absolute top-2 right-2"
-                        onClick={() => setUploadedImage(null)}
-                        data-testid="button-remove-image"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full h-48 border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center gap-3 hover-elevate transition-colors"
-                      data-testid="button-upload-area"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                        <ImageIcon className="h-6 w-6 text-primary" />
-                      </div>
-                      <div className="text-center">
-                        <p className="font-medium">Upload a room photo</p>
-                        <p className="text-sm text-muted-foreground">
-                          or drag and drop an inspiration image
-                        </p>
-                      </div>
-                    </button>
-                  )}
-                  <p className="text-sm text-muted-foreground">
-                    Upload a photo of your party space or an inspiration image to generate themed decoration ideas.
-                  </p>
-                </TabsContent>
+              <div className="h-px bg-border" />
 
-                <TabsContent value="idea" className="space-y-4">
-                  <Textarea
-                    placeholder="Describe your party theme idea... e.g., 'A magical fairy garden party with lots of flowers and butterflies for a 5-year-old girl'"
-                    value={ideaText}
-                    onChange={(e) => setIdeaText(e.target.value)}
-                    className="min-h-[180px] resize-none"
-                    data-testid="input-idea-text"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Be specific about colors, themes, and the age of the birthday child for best results.
-                  </p>
-                </TabsContent>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-primary" />
+                  <Label className="text-base font-semibold">Visual Inspiration</Label>
+                </div>
 
-                <TabsContent value="templates" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                <RadioGroup
+                  value={inspirationType}
+                  onValueChange={(value) => setInspirationType(value as "template" | "upload")}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="template" id="template" data-testid="radio-template" />
+                    <Label htmlFor="template" className="cursor-pointer">Choose a Template</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="upload" id="upload" data-testid="radio-upload" />
+                    <Label htmlFor="upload" className="cursor-pointer">Upload Image</Label>
+                  </div>
+                </RadioGroup>
+
+                {inspirationType === "template" && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {presetThemes.map((theme) => (
                       <button
                         key={theme.id}
-                        onClick={() => setSelectedTemplate(theme.id)}
+                        onClick={() => handleTemplateSelect(theme.id)}
                         className={`relative overflow-visible rounded-lg transition-all hover-elevate ${
                           selectedTemplate === theme.id
                             ? "ring-2 ring-primary ring-offset-2"
@@ -295,20 +266,65 @@ export default function Dashboard() {
                         <img
                           src={theme.image}
                           alt={theme.name}
-                          className="w-full h-24 object-cover rounded-lg"
+                          className="w-full h-20 object-cover rounded-lg"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg" />
-                        <span className="absolute bottom-2 left-2 right-2 text-white text-sm font-medium text-left">
+                        <span className="absolute bottom-1 left-1 right-1 text-white text-xs font-medium text-center truncate">
                           {theme.name}
                         </span>
                       </button>
                     ))}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Choose a preset theme to get instant decoration ideas and shopping lists.
-                  </p>
-                </TabsContent>
-              </Tabs>
+                )}
+
+                {inspirationType === "upload" && (
+                  <div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleImageUpload}
+                      accept="image/*"
+                      className="hidden"
+                      data-testid="input-file-upload"
+                    />
+                    
+                    {uploadedImage ? (
+                      <div className="relative">
+                        <img 
+                          src={uploadedImage} 
+                          alt="Uploaded" 
+                          className="w-full h-40 object-cover rounded-lg"
+                        />
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="absolute top-2 right-2"
+                          onClick={() => setUploadedImage(null)}
+                          data-testid="button-remove-image"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full h-40 border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center gap-3 hover-elevate transition-colors"
+                        data-testid="button-upload-area"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <ImageIcon className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="text-center">
+                          <p className="font-medium">Upload inspiration image</p>
+                          <p className="text-sm text-muted-foreground">
+                            Room photo or party inspiration
+                          </p>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </Card>
 
             <Button
@@ -340,7 +356,7 @@ export default function Dashboard() {
                 </div>
                 <h3 className="text-xl font-semibold mb-2">Your Decoration Plan</h3>
                 <p className="text-muted-foreground max-w-sm">
-                  Upload an image, type your idea, or select a template, then click "Generate" to see your personalized decoration plan.
+                  Describe your party vision and choose visual inspiration, then click "Generate" to see your personalized decoration plan with a custom theme image.
                 </p>
               </Card>
             )}
@@ -350,7 +366,7 @@ export default function Dashboard() {
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Creating Your Perfect Theme</h3>
                 <p className="text-muted-foreground">
-                  Our AI is curating moodboard images and decoration ideas...
+                  Our AI is generating a custom theme image and curating decoration ideas...
                 </p>
               </Card>
             )}
@@ -374,6 +390,24 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </Card>
+
+                {result.themeImage && (
+                  <Card className="p-6" data-testid="card-theme-image">
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      <Wand2 className="h-4 w-4 text-primary" />
+                      AI-Generated Theme Vision
+                    </h3>
+                    <div className="relative overflow-hidden rounded-lg">
+                      <img
+                        src={result.themeImage}
+                        alt={result.title}
+                        className="w-full h-64 object-cover"
+                        data-testid="img-theme-image"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+                    </div>
+                  </Card>
+                )}
 
                 <Card className="p-6" data-testid="card-moodboard">
                   <h3 className="font-semibold mb-4">Moodboard</h3>
