@@ -25,20 +25,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/generate-theme', isAuthenticated, async (req: any, res) => {
     try {
-      const { type, content } = req.body;
+      const { prompt, inspirationType, inspirationContent } = req.body;
 
-      if (!type || !content) {
-        return res.status(400).json({ message: "Missing type or content" });
+      if (!prompt && !inspirationContent) {
+        return res.status(400).json({ message: "Please provide a description or select inspiration" });
       }
 
-      let prompt = "";
+      let combinedPrompt = "";
       
-      if (type === "image") {
-        prompt = `Based on this image description/inspiration, create a kids birthday party decoration theme. The image shows: ${content.substring(0, 500)}...`;
-      } else if (type === "text") {
-        prompt = `Create a kids birthday party decoration theme based on this idea: ${content}`;
-      } else if (type === "template") {
-        prompt = `Create a detailed kids birthday party decoration theme for: ${content}`;
+      if (prompt && inspirationContent) {
+        if (inspirationType === "template") {
+          combinedPrompt = `Create a kids birthday party decoration theme that combines: 
+User's vision: "${prompt}"
+Template inspiration: ${inspirationContent}
+Blend these elements together for a cohesive theme.`;
+        } else if (inspirationType === "upload") {
+          combinedPrompt = `Create a kids birthday party decoration theme based on:
+User's vision: "${prompt}"
+The user has also uploaded an inspiration image for reference.`;
+        }
+      } else if (prompt) {
+        combinedPrompt = `Create a kids birthday party decoration theme based on this idea: ${prompt}`;
+      } else if (inspirationContent && inspirationType === "template") {
+        combinedPrompt = `Create a detailed kids birthday party decoration theme for: ${inspirationContent}`;
+      } else {
+        combinedPrompt = `Create a kids birthday party decoration theme based on the uploaded inspiration image.`;
       }
 
       const systemPrompt = `You are a professional party planner specializing in kids' birthday party decorations. 
@@ -47,6 +58,7 @@ Generate a complete party decoration plan in JSON format with the following stru
   "title": "Theme name (e.g., 'Enchanted Princess Castle')",
   "description": "A 2-3 sentence description of the theme and its mood",
   "colors": ["#hex1", "#hex2", "#hex3", "#hex4"] (4-5 theme colors as hex codes),
+  "themeImagePrompt": "A detailed DALL-E prompt for generating a beautiful party decoration scene that captures this theme. Should describe a photorealistic party setup with decorations, balloons, table settings, and themed elements. Maximum 400 characters.",
   "moodboardImages": [
     "https://images.unsplash.com/photo-...",
     "https://images.unsplash.com/photo-...",
@@ -65,6 +77,7 @@ Generate a complete party decoration plan in JSON format with the following stru
 }
 
 Important:
+- The themeImagePrompt should be vivid and specific for generating a party decoration scene
 - Use real, working Unsplash image URLs (format: https://images.unsplash.com/photo-{id}?w=400)
 - Price ranges should be realistic for party decorations
 - Include a mix of essentials (balloons, banners, tableware) and theme-specific items
@@ -75,7 +88,7 @@ Important:
         model: "gpt-4o",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: prompt }
+          { role: "user", content: combinedPrompt }
         ],
         response_format: { type: "json_object" },
         temperature: 0.7,
@@ -86,7 +99,36 @@ Important:
         throw new Error("No response from AI");
       }
 
-      const result = JSON.parse(resultText);
+      const planResult = JSON.parse(resultText);
+
+      let themeImage = "";
+      
+      if (planResult.themeImagePrompt) {
+        try {
+          const imageResponse = await openai.images.generate({
+            model: "dall-e-3",
+            prompt: `A beautiful, photorealistic party decoration setup: ${planResult.themeImagePrompt}. Professional party photography, vibrant colors, celebration atmosphere, high quality, no text or watermarks.`,
+            n: 1,
+            size: "1792x1024",
+            quality: "standard",
+          });
+
+          themeImage = imageResponse.data?.[0]?.url || "";
+        } catch (imageError) {
+          console.error("Error generating theme image:", imageError);
+        }
+      }
+
+      const result = {
+        title: planResult.title,
+        description: planResult.description,
+        colors: planResult.colors,
+        themeImage: themeImage,
+        moodboardImages: planResult.moodboardImages,
+        decorItems: planResult.decorItems,
+        totalCostRange: planResult.totalCostRange,
+      };
+
       res.json(result);
     } catch (error) {
       console.error("Error generating theme:", error);
