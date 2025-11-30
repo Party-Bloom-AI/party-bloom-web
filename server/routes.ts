@@ -197,6 +197,66 @@ Important:
     }
   });
 
+  app.get("/api/favorites", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const favorites = await storage.getFavorites(userId);
+      res.json(favorites);
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
+      res.status(500).json({ message: "Failed to fetch favorites" });
+    }
+  });
+
+  app.post("/api/favorites", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { title, description, colors, themeImage, moodboardImages, decorItems, totalCostRange } = req.body;
+      
+      if (!title) {
+        return res.status(400).json({ message: "Theme title is required" });
+      }
+
+      const favorite = await storage.createFavorite({
+        userId,
+        title,
+        description,
+        colors,
+        themeImage,
+        moodboardImages,
+        decorItems,
+        totalCostRange,
+      });
+
+      res.json(favorite);
+    } catch (error) {
+      console.error("Error saving favorite:", error);
+      res.status(500).json({ message: "Failed to save favorite" });
+    }
+  });
+
+  app.delete("/api/favorites/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const favoriteId = parseInt(req.params.id, 10);
+      
+      if (isNaN(favoriteId)) {
+        return res.status(400).json({ message: "Invalid favorite ID" });
+      }
+
+      const deleted = await storage.deleteFavorite(favoriteId, userId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Favorite not found" });
+      }
+
+      res.json({ message: "Favorite deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting favorite:", error);
+      res.status(500).json({ message: "Failed to delete favorite" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
