@@ -339,18 +339,27 @@ Important:
 
   app.get("/api/favorites", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        console.error("Favorites error: No user ID in session");
+        return res.status(401).json({ message: "User not authenticated" });
+      }
       const favorites = await storage.getFavorites(userId);
       res.json(favorites);
-    } catch (error) {
-      console.error("Error fetching favorites:", error);
-      res.status(500).json({ message: "Failed to fetch favorites" });
+    } catch (error: any) {
+      console.error("Error fetching favorites:", error?.message || error);
+      console.error("Error stack:", error?.stack);
+      res.status(500).json({ message: "Failed to fetch favorites", error: error?.message });
     }
   });
 
   app.post("/api/favorites", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        console.error("Favorites POST error: No user ID in session");
+        return res.status(401).json({ message: "User not authenticated" });
+      }
       const { title, description, colors, themeImage, moodboardImages, decorItems, totalCostRange } = req.body;
       
       if (!title) {
@@ -369,15 +378,20 @@ Important:
       });
 
       res.json(favorite);
-    } catch (error) {
-      console.error("Error saving favorite:", error);
-      res.status(500).json({ message: "Failed to save favorite" });
+    } catch (error: any) {
+      console.error("Error saving favorite:", error?.message || error);
+      console.error("Error stack:", error?.stack);
+      res.status(500).json({ message: "Failed to save favorite", error: error?.message });
     }
   });
 
   app.delete("/api/favorites/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        console.error("Favorites DELETE error: No user ID in session");
+        return res.status(401).json({ message: "User not authenticated" });
+      }
       const favoriteId = parseInt(req.params.id, 10);
       
       if (isNaN(favoriteId)) {
@@ -391,9 +405,10 @@ Important:
       }
 
       res.json({ message: "Favorite deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting favorite:", error);
-      res.status(500).json({ message: "Failed to delete favorite" });
+    } catch (error: any) {
+      console.error("Error deleting favorite:", error?.message || error);
+      console.error("Error stack:", error?.stack);
+      res.status(500).json({ message: "Failed to delete favorite", error: error?.message });
     }
   });
 
