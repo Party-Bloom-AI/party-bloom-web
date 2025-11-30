@@ -12,7 +12,7 @@ const openai = new OpenAI({
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
 
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -23,16 +23,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/generate-theme', isAuthenticated, async (req: any, res) => {
+  app.post("/api/generate-theme", isAuthenticated, async (req: any, res) => {
     try {
       const { prompt, inspirationType, inspirationContent } = req.body;
 
       if (!prompt && !inspirationContent) {
-        return res.status(400).json({ message: "Please provide a description or select inspiration" });
+        return res.status(400).json({
+          message: "Please provide a description or select inspiration",
+        });
       }
 
       let combinedPrompt = "";
-      
+
       if (prompt && inspirationContent) {
         if (inspirationType === "template") {
           combinedPrompt = `Create a kids birthday party decoration theme that combines: 
@@ -89,18 +91,18 @@ Important:
         model: "gpt-5",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: combinedPrompt }
+          { role: "user", content: combinedPrompt },
         ],
         response_format: { type: "json_object" },
       };
-      
+
       console.log("=== GPT-5 Chat Request ===");
       console.log("Model:", chatRequest.model);
       console.log("User Prompt:", combinedPrompt);
       console.log("System Prompt Length:", systemPrompt.length, "chars");
-      
+
       const response = await openai.chat.completions.create(chatRequest as any);
-      
+
       console.log("=== GPT-5 Chat Response ===");
       console.log("Response ID:", response.id);
       console.log("Model Used:", response.model);
@@ -111,15 +113,18 @@ Important:
       if (!resultText) {
         throw new Error("No response from AI");
       }
-      
+
       console.log("Response Content:", resultText);
 
       const planResult = JSON.parse(resultText);
 
       let themeImage = "";
       const moodboardImages: string[] = [];
-      
-      const generateImage = async (prompt: string, size: "1536x1024" | "1024x1024" = "1024x1024"): Promise<string> => {
+
+      const generateImage = async (
+        prompt: string,
+        size: "1024x1536" | "1024x1024" = "1024x1024",
+      ): Promise<string> => {
         const fullPrompt = `${prompt}. Professional party photography, vibrant colors, celebration atmosphere, high quality, no text, no watermarks, no people.`;
         const imageRequest = {
           model: "gpt-image-1",
@@ -127,21 +132,26 @@ Important:
           n: 1,
           size: size,
         };
-        
+
         console.log("=== Image Generation Request ===");
         console.log("Model:", imageRequest.model);
         console.log("Size:", imageRequest.size);
         console.log("Prompt:", fullPrompt);
-        
+
         try {
           const imageResponse = await openai.images.generate(imageRequest);
-          
+
           console.log("=== Image Generation Response ===");
           console.log("Created:", imageResponse.created);
-          console.log("Image URL:", imageResponse.data?.[0]?.url ? "Generated successfully" : "No URL returned");
-          console.log("URL Preview:", imageResponse.data?.[0]?.url?.substring(0, 100) + "...");
           
-          return imageResponse.data?.[0]?.url || "";
+          const base64Data = (imageResponse.data?.[0] as any)?.b64_json;
+          if (base64Data) {
+            console.log("Image Base64: Generated successfully (length:", base64Data.length, "chars)");
+            return `data:image/png;base64,${base64Data}`;
+          }
+          
+          console.log("Image: No base64 data returned");
+          return "";
         } catch (error) {
           console.error("=== Image Generation Error ===");
           console.error("Error:", error);
@@ -152,15 +162,20 @@ Important:
       if (planResult.themeImagePrompt) {
         themeImage = await generateImage(
           `A beautiful photorealistic kids birthday party room fully decorated: ${planResult.themeImagePrompt}`,
-          "1536x1024"
+          "1024x1536",
         );
       }
 
-      if (planResult.moodboardPrompts && Array.isArray(planResult.moodboardPrompts)) {
-        const moodboardPromises = planResult.moodboardPrompts.slice(0, 4).map((prompt: string) =>
-          generateImage(`Photorealistic decorated party area: ${prompt}`)
-        );
-        
+      if (
+        planResult.moodboardPrompts &&
+        Array.isArray(planResult.moodboardPrompts)
+      ) {
+        const moodboardPromises = planResult.moodboardPrompts
+          .slice(0, 4)
+          .map((prompt: string) =>
+            generateImage(`Photorealistic decorated party area: ${prompt}`),
+          );
+
         const results = await Promise.all(moodboardPromises);
         moodboardImages.push(...results.filter((url: string) => url !== ""));
       }
