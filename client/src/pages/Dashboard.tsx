@@ -78,6 +78,7 @@ export default function Dashboard() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [result, setResult] = useState<ThemeResult | null>(null);
+  const [savedThemeId, setSavedThemeId] = useState<number | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
   const [expandedFavorite, setExpandedFavorite] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,6 +94,7 @@ export default function Dashboard() {
     },
     onSuccess: (data) => {
       setResult(data);
+      setSavedThemeId(null);
     },
   });
 
@@ -101,7 +103,8 @@ export default function Dashboard() {
       const response = await apiRequest("POST", "/api/favorites", themeData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setSavedThemeId(data.id);
       queryClient.invalidateQueries({ queryKey: ["/api/favorites"] });
       toast({
         title: "Saved to Favorites",
@@ -120,9 +123,12 @@ export default function Dashboard() {
   const deleteFavoriteMutation = useMutation({
     mutationFn: async (id: number) => {
       const response = await apiRequest("DELETE", `/api/favorites/${id}`);
-      return response.json();
+      return { id };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (savedThemeId === data.id) {
+        setSavedThemeId(null);
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/favorites"] });
       toast({
         title: "Removed from Favorites",
@@ -645,21 +651,39 @@ export default function Dashboard() {
                       <h3 className="text-xl font-bold mb-2">{result.title}</h3>
                       <p className="text-muted-foreground">{result.description}</p>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => saveFavoriteMutation.mutate(result)}
-                      disabled={saveFavoriteMutation.isPending}
-                      className="gap-2 shrink-0"
-                      data-testid="button-save-favorite"
-                    >
-                      {saveFavoriteMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Heart className="h-4 w-4" />
-                      )}
-                      Save
-                    </Button>
+                    {savedThemeId ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deleteFavoriteMutation.mutate(savedThemeId)}
+                        disabled={deleteFavoriteMutation.isPending}
+                        className="gap-2 shrink-0"
+                        data-testid="button-unsave-favorite"
+                      >
+                        {deleteFavoriteMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Heart className="h-4 w-4 fill-current text-red-500" />
+                        )}
+                        Saved
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => saveFavoriteMutation.mutate(result)}
+                        disabled={saveFavoriteMutation.isPending}
+                        className="gap-2 shrink-0"
+                        data-testid="button-save-favorite"
+                      >
+                        {saveFavoriteMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Heart className="h-4 w-4" />
+                        )}
+                        Save
+                      </Button>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Theme colors:</span>
