@@ -631,7 +631,7 @@ export default function Dashboard() {
               ) : (
                 <>
                   <Sparkles className="h-5 w-5" />
-                  Generate Decoration Plan
+                  {result ? "Regenerate Decoration Plan" : "Generate Decoration Plan"}
                 </>
               )}
             </Button>
