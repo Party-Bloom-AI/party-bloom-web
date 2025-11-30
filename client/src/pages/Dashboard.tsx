@@ -14,8 +14,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Favorite } from "@shared/schema";
 import {
   Upload,
   Sparkles,
@@ -29,6 +31,9 @@ import {
   Palette,
   Wand2,
   Download,
+  Heart,
+  Trash2,
+  ChevronRight,
 } from "lucide-react";
 import logoImage from "@assets/logo_1764136309223.png";
 import princessTheme from "@assets/princess_1764138848730.png";
@@ -67,12 +72,19 @@ const presetThemes = [
 export default function Dashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [promptText, setPromptText] = useState("");
   const [inspirationType, setInspirationType] = useState<"template" | "upload">("template");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [result, setResult] = useState<ThemeResult | null>(null);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [expandedFavorite, setExpandedFavorite] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: favorites = [], isLoading: favoritesLoading } = useQuery<Favorite[]>({
+    queryKey: ["/api/favorites"],
+  });
 
   const generateMutation = useMutation({
     mutationFn: async (input: { prompt: string; inspirationType: string; inspirationContent: string }) => {
@@ -81,6 +93,48 @@ export default function Dashboard() {
     },
     onSuccess: (data) => {
       setResult(data);
+    },
+  });
+
+  const saveFavoriteMutation = useMutation({
+    mutationFn: async (themeData: ThemeResult) => {
+      const response = await apiRequest("POST", "/api/favorites", themeData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/favorites"] });
+      toast({
+        title: "Saved to Favorites",
+        description: "Your theme has been saved to your favorites.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save theme to favorites.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteFavoriteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/favorites/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/favorites"] });
+      toast({
+        title: "Removed from Favorites",
+        description: "Theme has been removed from your favorites.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove theme from favorites.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -218,6 +272,21 @@ export default function Dashboard() {
 
             <div className="flex items-center gap-3">
               <Button
+                variant={showFavorites ? "secondary" : "outline"}
+                onClick={() => setShowFavorites(!showFavorites)}
+                data-testid="button-toggle-favorites"
+                className="gap-2"
+              >
+                <Heart className="h-4 w-4" />
+                <span className="hidden sm:inline">Favorites</span>
+                {favorites.length > 0 && (
+                  <span className="ml-1 bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full">
+                    {favorites.length}
+                  </span>
+                )}
+              </Button>
+
+              <Button
                 onClick={handleNewDecoration}
                 data-testid="button-new-decoration"
                 className="gap-2"
@@ -260,6 +329,143 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
+        {showFavorites ? (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold mb-2">Saved Themes</h1>
+                <p className="text-muted-foreground">
+                  Your favorite party decoration themes
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowFavorites(false)}
+                data-testid="button-back-to-planner"
+                className="gap-2"
+              >
+                <ChevronRight className="h-4 w-4 rotate-180" />
+                Back to Planner
+              </Button>
+            </div>
+
+            {favoritesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : favorites.length === 0 ? (
+              <Card className="p-8 flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <Heart className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">No Saved Themes Yet</h3>
+                <p className="text-muted-foreground max-w-sm mb-4">
+                  Generate a party theme and click "Save" to add it to your favorites.
+                </p>
+                <Button onClick={() => setShowFavorites(false)} data-testid="button-start-planning">
+                  Start Planning
+                </Button>
+              </Card>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {favorites.map((favorite) => (
+                  <Card 
+                    key={favorite.id} 
+                    className="overflow-hidden"
+                    data-testid={`card-favorite-${favorite.id}`}
+                  >
+                    {favorite.themeImage && (
+                      <img
+                        src={favorite.themeImage}
+                        alt={favorite.title}
+                        className="w-full h-40 object-cover"
+                      />
+                    )}
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold">{favorite.title}</h3>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteFavoriteMutation.mutate(favorite.id)}
+                          disabled={deleteFavoriteMutation.isPending}
+                          className="shrink-0 text-muted-foreground hover:text-destructive"
+                          data-testid={`button-delete-favorite-${favorite.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      {favorite.colors && Array.isArray(favorite.colors) && (
+                        <div className="flex gap-1">
+                          {favorite.colors.map((color: string, i: number) => (
+                            <div
+                              key={i}
+                              className="w-5 h-5 rounded-full border border-border"
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {favorite.totalCostRange && (
+                        <p className="text-sm font-medium text-primary">{favorite.totalCostRange}</p>
+                      )}
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => setExpandedFavorite(expandedFavorite === favorite.id ? null : favorite.id)}
+                        data-testid={`button-expand-favorite-${favorite.id}`}
+                      >
+                        {expandedFavorite === favorite.id ? "Show Less" : "View Details"}
+                      </Button>
+
+                      {expandedFavorite === favorite.id && (
+                        <div className="space-y-4 pt-3 border-t">
+                          {favorite.description && (
+                            <p className="text-sm text-muted-foreground">{favorite.description}</p>
+                          )}
+
+                          {favorite.moodboardImages && Array.isArray(favorite.moodboardImages) && favorite.moodboardImages.length > 0 && (
+                            <div>
+                              <p className="text-sm font-medium mb-2">Moodboard</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                {favorite.moodboardImages.map((img: string, i: number) => (
+                                  <img
+                                    key={i}
+                                    src={img}
+                                    alt={`Moodboard ${i + 1}`}
+                                    className="w-full h-16 object-cover rounded"
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {favorite.decorItems && Array.isArray(favorite.decorItems) && favorite.decorItems.length > 0 && (
+                            <div>
+                              <p className="text-sm font-medium mb-2">Decoration Items</p>
+                              <div className="space-y-2">
+                                {favorite.decorItems.map((item: any, i: number) => (
+                                  <div key={i} className="flex items-center justify-between text-sm">
+                                    <span>{item.name}</span>
+                                    <span className="text-muted-foreground">{item.priceRange}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
         <div className="grid lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             <div>
@@ -434,8 +640,27 @@ export default function Dashboard() {
             {result && (
               <div className="space-y-6">
                 <Card className="p-6" data-testid="card-theme-summary">
-                  <h3 className="text-xl font-bold mb-2">{result.title}</h3>
-                  <p className="text-muted-foreground mb-4">{result.description}</p>
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold mb-2">{result.title}</h3>
+                      <p className="text-muted-foreground">{result.description}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => saveFavoriteMutation.mutate(result)}
+                      disabled={saveFavoriteMutation.isPending}
+                      className="gap-2 shrink-0"
+                      data-testid="button-save-favorite"
+                    >
+                      {saveFavoriteMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Heart className="h-4 w-4" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Theme colors:</span>
                     <div className="flex gap-1">
@@ -567,6 +792,7 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+        )}
       </main>
     </div>
   );
