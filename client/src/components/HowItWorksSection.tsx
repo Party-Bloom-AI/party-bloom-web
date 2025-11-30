@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Upload, Sparkles, ShoppingBag } from "lucide-react";
-import image1 from "@assets/1_1764136309217.png";
+import yourVisionImage from "@assets/your-vision_1764530395753.jpeg";
 import image3 from "@assets/3_1764136309220.png";
 import image4 from "@assets/4_1764136309221.png";
 
@@ -10,7 +10,7 @@ const steps = [
     title: "Share Your Vision",
     description: "Upload an image, type an idea, or browse our curated templates. It takes just seconds.",
     icon: Upload,
-    image: image1,
+    image: yourVisionImage,
   },
   {
     number: 2,

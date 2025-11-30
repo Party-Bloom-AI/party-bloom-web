@@ -47,6 +47,10 @@ import princessTheme from "@assets/princess_1764138848730.png";
 import dinoTheme from "@assets/dino_1764138848726.png";
 import mermaidTheme from "@assets/marmaid_1764138848728.png";
 import spaceTheme from "@assets/space_1764138848730.png";
+import safariTheme from "@assets/safari-adventure_1764530008219.jpeg";
+import unicornTheme from "@assets/magical-unicorn_1764530008219.jpeg";
+import superheroTheme from "@assets/superhero-party_1764530008220.jpeg";
+import gardenTheme from "@assets/garden-party_1764530008216.jpeg";
 
 interface DecorItem {
   name: string;
@@ -70,10 +74,10 @@ const presetThemes = [
   { id: "dino", name: "Dinosaur Adventure", image: dinoTheme, prompt: "Exciting dinosaur adventure theme with prehistoric creatures, jungle elements, and earthy colors" },
   { id: "mermaid", name: "Under the Sea", image: mermaidTheme, prompt: "Enchanting mermaid under the sea theme with ocean colors, seashells, and underwater creatures" },
   { id: "space", name: "Space Explorer", image: spaceTheme, prompt: "Cosmic space explorer theme with rockets, planets, stars, and galaxy decorations" },
-  { id: "safari", name: "Safari Adventure", image: dinoTheme, prompt: "Wild safari adventure theme with jungle animals, tropical leaves, and earthy tones" },
-  { id: "unicorn", name: "Magical Unicorn", image: princessTheme, prompt: "Magical unicorn theme with rainbow colors, sparkles, and enchanted forest elements" },
-  { id: "superhero", name: "Superhero Party", image: spaceTheme, prompt: "Action-packed superhero theme with bold colors, comic book elements, and heroic decorations" },
-  { id: "garden", name: "Garden Party", image: mermaidTheme, prompt: "Beautiful garden party theme with flowers, butterflies, and pastel spring colors" },
+  { id: "safari", name: "Safari Adventure", image: safariTheme, prompt: "Wild safari adventure theme with jungle animals, tropical leaves, and earthy tones" },
+  { id: "unicorn", name: "Magical Unicorn", image: unicornTheme, prompt: "Magical unicorn theme with rainbow colors, sparkles, and enchanted forest elements" },
+  { id: "superhero", name: "Superhero Party", image: superheroTheme, prompt: "Action-packed superhero theme with bold colors, comic book elements, and heroic decorations" },
+  { id: "garden", name: "Garden Party", image: gardenTheme, prompt: "Beautiful garden party theme with flowers, butterflies, and pastel spring colors" },
 ];
 
 export default function Dashboard() {
