@@ -13,6 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -81,6 +85,7 @@ export default function Dashboard() {
   const [savedThemeId, setSavedThemeId] = useState<number | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
   const [expandedFavorite, setExpandedFavorite] = useState<number | null>(null);
+  const [modalImage, setModalImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: favorites = [], isLoading: favoritesLoading } = useQuery<Favorite[]>({
@@ -381,11 +386,17 @@ export default function Dashboard() {
                     data-testid={`card-favorite-${favorite.id}`}
                   >
                     {favorite.themeImage && (
-                      <img
-                        src={favorite.themeImage}
-                        alt={favorite.title}
-                        className="w-full h-40 object-cover"
-                      />
+                      <button
+                        onClick={() => setModalImage(favorite.themeImage)}
+                        className="w-full cursor-zoom-in"
+                        data-testid={`button-view-favorite-image-${favorite.id}`}
+                      >
+                        <img
+                          src={favorite.themeImage}
+                          alt={favorite.title}
+                          className="w-full h-40 object-cover"
+                        />
+                      </button>
                     )}
                     <div className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
@@ -439,12 +450,18 @@ export default function Dashboard() {
                               <p className="text-sm font-medium mb-2">Moodboard</p>
                               <div className="grid grid-cols-2 gap-2">
                                 {favorite.moodboardImages.map((img: string, i: number) => (
-                                  <img
+                                  <button
                                     key={i}
-                                    src={img}
-                                    alt={`Moodboard ${i + 1}`}
-                                    className="w-full h-16 object-cover rounded"
-                                  />
+                                    onClick={() => setModalImage(img)}
+                                    className="cursor-zoom-in"
+                                    data-testid={`button-view-favorite-moodboard-${favorite.id}-${i}`}
+                                  >
+                                    <img
+                                      src={img}
+                                      alt={`Moodboard ${i + 1}`}
+                                      className="w-full h-16 object-cover rounded"
+                                    />
+                                  </button>
                                 ))}
                               </div>
                             </div>
@@ -718,7 +735,11 @@ export default function Dashboard() {
                         Download
                       </Button>
                     </div>
-                    <div className="relative overflow-hidden rounded-lg">
+                    <button
+                      onClick={() => setModalImage(result.themeImage)}
+                      className="relative overflow-hidden rounded-lg w-full cursor-zoom-in"
+                      data-testid="button-view-theme-image"
+                    >
                       <img
                         src={result.themeImage}
                         alt={result.title}
@@ -726,7 +747,7 @@ export default function Dashboard() {
                         data-testid="img-theme-image"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
-                    </div>
+                    </button>
                   </Card>
                 )}
 
@@ -753,12 +774,18 @@ export default function Dashboard() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {result.moodboardImages.map((url, i) => (
                       <div key={i} className="relative group">
-                        <img
-                          src={url}
-                          alt={`Moodboard ${i + 1}`}
-                          className="w-full h-24 md:h-32 object-cover rounded-lg"
-                          data-testid={`img-moodboard-${i}`}
-                        />
+                        <button
+                          onClick={() => setModalImage(url)}
+                          className="w-full cursor-zoom-in"
+                          data-testid={`button-view-moodboard-${i}`}
+                        >
+                          <img
+                            src={url}
+                            alt={`Moodboard ${i + 1}`}
+                            className="w-full h-24 md:h-32 object-cover rounded-lg"
+                            data-testid={`img-moodboard-${i}`}
+                          />
+                        </button>
                         <Button
                           variant="secondary"
                           size="icon"
@@ -818,6 +845,26 @@ export default function Dashboard() {
         </div>
       )}
       </main>
+
+      <Dialog open={!!modalImage} onOpenChange={(open) => !open && setModalImage(null)}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-transparent border-none">
+          <button
+            onClick={() => setModalImage(null)}
+            className="absolute right-4 top-4 z-50 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition-colors"
+            data-testid="button-close-modal"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          {modalImage && (
+            <img
+              src={modalImage}
+              alt="Full size view"
+              className="w-full h-auto max-h-[85vh] object-contain rounded-lg"
+              data-testid="img-modal-fullsize"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
