@@ -78,7 +78,7 @@ const presetThemes = [
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
-  const { user } = useAuth();
+  const { user, hasSubscription } = useAuth();
   const { toast } = useToast();
   const [promptText, setPromptText] = useState("");
   const [inspirationType, setInspirationType] = useState<"template" | "upload">("template");
@@ -302,6 +302,7 @@ export default function Dashboard() {
 
               <Button
                 onClick={handleNewDecoration}
+                disabled={!hasSubscription}
                 data-testid="button-new-decoration"
                 className="gap-2"
               >
@@ -647,7 +648,7 @@ export default function Dashboard() {
               size="lg"
               className="w-full text-lg py-6 h-auto gap-2"
               onClick={handleGenerate}
-              disabled={!canGenerate || generateMutation.isPending}
+              disabled={!hasSubscription || !canGenerate || generateMutation.isPending}
               data-testid="button-generate"
             >
               {generateMutation.isPending ? (
