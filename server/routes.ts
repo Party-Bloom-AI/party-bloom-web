@@ -112,19 +112,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const stripe = await getUncachableStripeClient();
-      const session = await stripe.checkout.sessions.retrieve(sessionId, {
-        expand: ['subscription'],
-      });
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
 
       if (session.payment_status !== 'no_payment_required' && session.payment_status !== 'paid') {
         return res.status(400).json({ message: "Payment not completed" });
       }
 
-      const subscription = session.subscription as any;
+      const subscriptionId = session.subscription;
       
-      if (!subscription) {
+      if (!subscriptionId) {
         return res.status(400).json({ message: "No subscription found" });
       }
+
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId as string) as any;
+
+      const currentPeriodStart = subscription.current_period_start 
+        ? new Date(subscription.current_period_start * 1000) 
+        : new Date();
+      const currentPeriodEnd = subscription.current_period_end 
+        ? new Date(subscription.current_period_end * 1000) 
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
       const existingSubscription = await storage.getSubscription(userId);
       
@@ -133,8 +140,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           stripeSubscriptionId: subscription.id,
           stripeCustomerId: session.customer as string,
           status: subscription.status,
-          currentPeriodStart: new Date(subscription.current_period_start * 1000),
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          currentPeriodStart,
+          currentPeriodEnd,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
         });
       } else {
@@ -143,8 +150,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           stripeSubscriptionId: subscription.id,
           stripeCustomerId: session.customer as string,
           status: subscription.status,
-          currentPeriodStart: new Date(subscription.current_period_start * 1000),
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          currentPeriodStart,
+          currentPeriodEnd,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
         });
       }
