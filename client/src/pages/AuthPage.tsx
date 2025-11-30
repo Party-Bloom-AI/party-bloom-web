@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Sparkles, Mail, Lock, User, ArrowRight, Shield } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { useAuth } from "@/hooks/useAuth";
-import logoImage from "@assets/2_1764136309219.png";
+import logoImage from "@assets/logo-trademark_1764496936402.png";
 
 export default function AuthPage() {
   const { isAuthenticated, isLoading } = useAuth();
