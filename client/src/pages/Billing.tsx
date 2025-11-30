@@ -98,7 +98,7 @@ export default function Billing() {
           <div className="flex items-start justify-between mb-6">
             <div>
               <h2 className="text-lg font-semibold mb-1">Party Bloom Monthly</h2>
-              <p className="text-muted-foreground text-sm">$20 CAD/month</p>
+              <p className="text-muted-foreground text-sm">$2 CAD/month</p>
             </div>
             {getStatusBadge()}
           </div>

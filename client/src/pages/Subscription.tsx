@@ -59,7 +59,7 @@ export default function Subscription() {
             </div>
             <h2 className="text-2xl font-bold mb-2">Party Bloom Monthly</h2>
             <div className="flex items-baseline justify-center gap-1">
-              <span className="text-4xl font-bold">$20</span>
+              <span className="text-4xl font-bold">$2</span>
               <span className="text-muted-foreground">CAD/month</span>
             </div>
             <p className="text-sm text-muted-foreground mt-2">

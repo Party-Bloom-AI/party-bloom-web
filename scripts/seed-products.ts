@@ -9,37 +9,56 @@ async function createProducts() {
     query: "name:'Party Bloom Monthly Subscription'"
   });
 
+  let productId: string;
+
   if (existingProducts.data.length > 0) {
-    console.log('Product already exists:', existingProducts.data[0].id);
+    productId = existingProducts.data[0].id;
+    console.log('Product already exists:', productId);
+    
     const prices = await stripe.prices.list({
-      product: existingProducts.data[0].id,
+      product: productId,
       active: true
     });
+    
     console.log('Existing prices:', prices.data.map(p => ({
       id: p.id,
       amount: p.unit_amount,
       currency: p.currency,
       interval: p.recurring?.interval
     })));
-    return;
+
+    const has2CadPrice = prices.data.some(p => p.unit_amount === 200 && p.currency === 'cad');
+    
+    if (has2CadPrice) {
+      console.log('$2 CAD price already exists. No changes needed.');
+      return;
+    }
+
+    for (const price of prices.data) {
+      if (price.unit_amount !== 200) {
+        console.log(`Archiving old price: ${price.id} ($${(price.unit_amount || 0) / 100} ${price.currency})`);
+        await stripe.prices.update(price.id, { active: false });
+      }
+    }
+  } else {
+    console.log('Creating Party Bloom subscription product...');
+    
+    const product = await stripe.products.create({
+      name: 'Party Bloom Monthly Subscription',
+      description: 'Full access to AI-powered party planning with unlimited theme generations, moodboards, and shopping lists.',
+      metadata: {
+        app: 'party-bloom',
+        type: 'subscription'
+      }
+    });
+
+    productId = product.id;
+    console.log('Created product:', productId);
   }
 
-  console.log('Creating Party Bloom subscription product...');
-  
-  const product = await stripe.products.create({
-    name: 'Party Bloom Monthly Subscription',
-    description: 'Full access to AI-powered party planning with unlimited theme generations, moodboards, and shopping lists.',
-    metadata: {
-      app: 'party-bloom',
-      type: 'subscription'
-    }
-  });
-
-  console.log('Created product:', product.id);
-
   const monthlyPrice = await stripe.prices.create({
-    product: product.id,
-    unit_amount: 2000,
+    product: productId,
+    unit_amount: 200,
     currency: 'cad',
     recurring: {
       interval: 'month',
@@ -52,8 +71,8 @@ async function createProducts() {
   });
 
   console.log('Created monthly price:', monthlyPrice.id);
-  console.log('Price: $20.00 CAD/month with 30-day free trial');
-  console.log('\nDone! Product and price have been created in Stripe.');
+  console.log('Price: $2.00 CAD/month with 30-day free trial');
+  console.log('\nDone! Product and price have been updated in Stripe.');
 }
 
 createProducts().catch(console.error);
