@@ -70,16 +70,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateUserStripeCustomerId(userId, customerId);
       }
 
-      const pricesResult = await db.execute(
-        sql`SELECT id FROM stripe.prices WHERE active = true AND currency = 'cad' LIMIT 1`
-      );
+      // Fetch active price directly from Stripe to avoid sync issues between dev/prod
+      const prices = await stripe.prices.list({
+        active: true,
+        currency: 'cad',
+        limit: 10,
+      });
+      
+      // Find the $2 CAD monthly price (200 cents)
+      const monthlyPrice = prices.data.find(p => p.unit_amount === 200 && p.recurring?.interval === 'month');
       
       let priceId: string;
-      if (pricesResult.rows.length > 0) {
-        priceId = pricesResult.rows[0].id as string;
+      if (monthlyPrice) {
+        priceId = monthlyPrice.id;
+      } else if (prices.data.length > 0) {
+        // Fallback to any active CAD price
+        priceId = prices.data[0].id;
       } else {
-        return res.status(500).json({ message: "No subscription price found. Please run the product seeding script." });
+        console.error("No active CAD prices found in Stripe");
+        return res.status(500).json({ message: "No subscription price found. Please create a price in Stripe." });
       }
+      
+      console.log("Using Stripe price:", priceId);
 
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       
