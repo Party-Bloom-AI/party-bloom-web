@@ -40,6 +40,7 @@ import {
   Heart,
   Trash2,
   ChevronRight,
+  CreditCard,
 } from "lucide-react";
 import logoImage from "@assets/logo_1764136309223.png";
 import princessTheme from "@assets/princess_1764138848730.png";
@@ -330,6 +331,10 @@ export default function Dashboard() {
                     )}
                   </div>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/billing")} data-testid="button-billing">
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Billing
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} data-testid="button-logout">
                     <LogOut className="h-4 w-4 mr-2" />
                     Log out
