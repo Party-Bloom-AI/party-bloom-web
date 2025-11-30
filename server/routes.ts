@@ -85,19 +85,34 @@ Important:
 - Total cost should accurately sum the individual item ranges
 - Retailer links should be real search URLs for those items`;
 
-      const response = await openai.chat.completions.create({
+      const chatRequest = {
         model: "gpt-5",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: combinedPrompt }
         ],
         response_format: { type: "json_object" },
-      });
+      };
+      
+      console.log("=== GPT-5 Chat Request ===");
+      console.log("Model:", chatRequest.model);
+      console.log("User Prompt:", combinedPrompt);
+      console.log("System Prompt Length:", systemPrompt.length, "chars");
+      
+      const response = await openai.chat.completions.create(chatRequest as any);
+      
+      console.log("=== GPT-5 Chat Response ===");
+      console.log("Response ID:", response.id);
+      console.log("Model Used:", response.model);
+      console.log("Usage:", JSON.stringify(response.usage));
+      console.log("Finish Reason:", response.choices[0]?.finish_reason);
 
       const resultText = response.choices[0]?.message?.content;
       if (!resultText) {
         throw new Error("No response from AI");
       }
+      
+      console.log("Response Content:", resultText);
 
       const planResult = JSON.parse(resultText);
 
@@ -105,16 +120,31 @@ Important:
       const moodboardImages: string[] = [];
       
       const generateImage = async (prompt: string, size: "1536x1024" | "1024x1024" = "1024x1024"): Promise<string> => {
+        const fullPrompt = `${prompt}. Professional party photography, vibrant colors, celebration atmosphere, high quality, no text, no watermarks, no people.`;
+        const imageRequest = {
+          model: "gpt-image-1",
+          prompt: fullPrompt,
+          n: 1,
+          size: size,
+        };
+        
+        console.log("=== Image Generation Request ===");
+        console.log("Model:", imageRequest.model);
+        console.log("Size:", imageRequest.size);
+        console.log("Prompt:", fullPrompt);
+        
         try {
-          const imageResponse = await openai.images.generate({
-            model: "gpt-image-1",
-            prompt: `${prompt}. Professional party photography, vibrant colors, celebration atmosphere, high quality, no text, no watermarks, no people.`,
-            n: 1,
-            size: size,
-          });
+          const imageResponse = await openai.images.generate(imageRequest);
+          
+          console.log("=== Image Generation Response ===");
+          console.log("Created:", imageResponse.created);
+          console.log("Image URL:", imageResponse.data?.[0]?.url ? "Generated successfully" : "No URL returned");
+          console.log("URL Preview:", imageResponse.data?.[0]?.url?.substring(0, 100) + "...");
+          
           return imageResponse.data?.[0]?.url || "";
         } catch (error) {
-          console.error("Error generating image:", error);
+          console.error("=== Image Generation Error ===");
+          console.error("Error:", error);
           return "";
         }
       };
