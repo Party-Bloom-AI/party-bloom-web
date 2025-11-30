@@ -380,7 +380,7 @@ export default function Dashboard() {
                 </Button>
               </Card>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                 {favorites.map((favorite) => (
                   <Card 
                     key={favorite.id} 
