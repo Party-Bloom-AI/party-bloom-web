@@ -28,6 +28,7 @@ import {
   X,
   Palette,
   Wand2,
+  Download,
 } from "lucide-react";
 import logoImage from "@assets/logo_1764136309223.png";
 import princessTheme from "@assets/princess_1764138848730.png";
@@ -181,6 +182,15 @@ export default function Dashboard() {
     setUploadedImage(null);
     setSelectedTemplate(null);
     setInspirationType("template");
+  };
+
+  const downloadImage = (imageData: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = imageData;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const canGenerate = promptText.trim() || 
@@ -443,10 +453,22 @@ export default function Dashboard() {
 
                 {result.themeImage && (
                   <Card className="p-6" data-testid="card-theme-image">
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      <Wand2 className="h-4 w-4 text-primary" />
-                      AI-Generated Theme Vision
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Wand2 className="h-4 w-4 text-primary" />
+                        AI-Generated Theme Vision
+                      </h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadImage(result.themeImage, `${result.title.replace(/\s+/g, '-').toLowerCase()}-theme.png`)}
+                        data-testid="button-download-theme"
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download
+                      </Button>
+                    </div>
                     <div className="relative overflow-hidden rounded-lg">
                       <img
                         src={result.themeImage}
@@ -460,16 +482,44 @@ export default function Dashboard() {
                 )}
 
                 <Card className="p-6" data-testid="card-moodboard">
-                  <h3 className="font-semibold mb-4">Moodboard</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold">Moodboard</h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        result.moodboardImages.forEach((url, i) => {
+                          setTimeout(() => {
+                            downloadImage(url, `${result.title.replace(/\s+/g, '-').toLowerCase()}-moodboard-${i + 1}.png`);
+                          }, i * 300);
+                        });
+                      }}
+                      data-testid="button-download-all-moodboard"
+                      className="gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download All
+                    </Button>
+                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {result.moodboardImages.map((url, i) => (
-                      <img
-                        key={i}
-                        src={url}
-                        alt={`Moodboard ${i + 1}`}
-                        className="w-full h-24 md:h-32 object-cover rounded-lg"
-                        data-testid={`img-moodboard-${i}`}
-                      />
+                      <div key={i} className="relative group">
+                        <img
+                          src={url}
+                          alt={`Moodboard ${i + 1}`}
+                          className="w-full h-24 md:h-32 object-cover rounded-lg"
+                          data-testid={`img-moodboard-${i}`}
+                        />
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => downloadImage(url, `${result.title.replace(/\s+/g, '-').toLowerCase()}-moodboard-${i + 1}.png`)}
+                          data-testid={`button-download-moodboard-${i}`}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
                     ))}
                   </div>
                 </Card>
