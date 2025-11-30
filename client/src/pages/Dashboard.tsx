@@ -16,7 +16,9 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useAuth } from "@/hooks/useAuth";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -867,7 +869,10 @@ export default function Dashboard() {
       </main>
 
       <Dialog open={!!modalImage} onOpenChange={(open) => !open && setModalImage(null)}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-transparent border-none">
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-transparent border-none" aria-describedby={undefined}>
+          <VisuallyHidden>
+            <DialogTitle>Image Preview</DialogTitle>
+          </VisuallyHidden>
           <button
             onClick={() => setModalImage(null)}
             className="absolute right-4 top-4 z-50 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition-colors"
