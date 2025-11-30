@@ -326,7 +326,7 @@ export default function Dashboard() {
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-56">
                   <div className="px-2 py-1.5">
                     <p className="text-sm font-medium" data-testid="text-user-name">
                       {user?.firstName ? `${user.firstName} ${user.lastName || ""}` : user?.email}
