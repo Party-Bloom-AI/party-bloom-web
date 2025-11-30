@@ -260,25 +260,12 @@ Important:
         response_format: { type: "json_object" },
       };
 
-      console.log("=== GPT-5 Chat Request ===");
-      console.log("Model:", chatRequest.model);
-      console.log("User Prompt:", combinedPrompt);
-      console.log("System Prompt Length:", systemPrompt.length, "chars");
-
       const response = await openai.chat.completions.create(chatRequest as any);
-
-      console.log("=== GPT-5 Chat Response ===");
-      console.log("Response ID:", response.id);
-      console.log("Model Used:", response.model);
-      console.log("Usage:", JSON.stringify(response.usage));
-      console.log("Finish Reason:", response.choices[0]?.finish_reason);
 
       const resultText = response.choices[0]?.message?.content;
       if (!resultText) {
         throw new Error("No response from AI");
       }
-
-      console.log("Response Content:", resultText);
 
       const planResult = JSON.parse(resultText);
 
@@ -297,28 +284,17 @@ Important:
           size: size,
         };
 
-        console.log("=== Image Generation Request ===");
-        console.log("Model:", imageRequest.model);
-        console.log("Size:", imageRequest.size);
-        console.log("Prompt:", fullPrompt);
-
         try {
           const imageResponse = await openai.images.generate(imageRequest);
-
-          console.log("=== Image Generation Response ===");
-          console.log("Created:", imageResponse.created);
           
           const base64Data = (imageResponse.data?.[0] as any)?.b64_json;
           if (base64Data) {
-            console.log("Image Base64: Generated successfully (length:", base64Data.length, "chars)");
             return `data:image/png;base64,${base64Data}`;
           }
           
-          console.log("Image: No base64 data returned");
           return "";
         } catch (error) {
-          console.error("=== Image Generation Error ===");
-          console.error("Error:", error);
+          console.error("Image generation failed:", error);
           return "";
         }
       };

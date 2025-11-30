@@ -8,15 +8,21 @@ Party Bloom transforms the overwhelming task of party planning into a simple, en
 
 ## Features
 
-- **AI Theme Generation** - Share your vision through an image, text description, or browse curated templates
-- **Curated Moodboards** - Receive beautifully designed moodboards with 4-6 inspiring images
-- **Smart Shopping Lists** - Get detailed decoration shopping lists with cost estimates and retailer links
-- **100+ Preset Themes** - Access a library of popular party themes including:
+- **AI Theme Generation** - Share your vision through text description or browse 8 curated preset themes
+- **AI-Generated Moodboards** - Receive beautifully designed moodboards with 4 AI-generated inspiring images
+- **AI Hero Images** - Each theme includes a stunning AI-generated hero image
+- **Smart Shopping Lists** - Get detailed decoration shopping lists (5-10 items) with cost estimates and retailer links
+- **Preset Themes** - Access popular party themes including:
   - Princess Dreams
   - Dino Adventure
   - Mermaid Splash
   - Space Explorer
-  - And many more!
+  - Safari
+  - Unicorn
+  - Superhero
+  - Garden
+- **Subscription Model** - $20 CAD/month with 30-day free trial (payment info required upfront)
+- **Billing Portal** - Manage subscription through Stripe customer portal
 
 ## Tech Stack
 
@@ -27,6 +33,9 @@ Party Bloom transforms the overwhelming task of party planning into a simple, en
 - **Backend**: Express.js
 - **Build Tool**: Vite
 - **Database**: PostgreSQL with Drizzle ORM
+- **AI**: OpenAI GPT-5 for theme generation, GPT-Image-1 for image generation
+- **Payments**: Stripe (subscriptions, trials, billing portal)
+- **Authentication**: Replit Auth (OpenID Connect)
 
 ## Project Structure
 
@@ -44,11 +53,24 @@ Party Bloom transforms the overwhelming task of party planning into a simple, en
 │   ├── index.ts            # Server entry point
 │   ├── routes.ts           # API routes
 │   ├── storage.ts          # Data storage interface
+│   ├── webhookHandlers.ts  # Stripe webhook handlers
 │   └── vite.ts             # Vite dev server setup
 ├── shared/                 # Shared types and schemas
 │   └── schema.ts           # Database schema and types
+├── scripts/                # Utility scripts
+│   └── seed-products.ts    # Stripe product seeding
 └── attached_assets/        # Static assets and images
 ```
+
+## Environment Variables
+
+The following environment variables are required:
+
+- `DATABASE_URL` - PostgreSQL connection string
+- `SESSION_SECRET` - Session encryption secret
+- `STRIPE_SECRET_KEY` - Stripe API secret key
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret
+- `OPENAI_API_KEY` - OpenAI API key (via AI integration)
 
 ## Getting Started
 
@@ -56,6 +78,9 @@ Party Bloom transforms the overwhelming task of party planning into a simple, en
 
 - Node.js 18 or higher
 - npm or yarn
+- PostgreSQL database
+- Stripe account
+- OpenAI API access
 
 ### Installation
 
@@ -70,32 +95,52 @@ cd party-bloom
 npm install
 ```
 
-3. Start the development server:
+3. Set up environment variables (see Environment Variables section)
+
+4. Push database schema:
+```bash
+npm run db:push
+```
+
+5. Seed Stripe products:
+```bash
+npx tsx scripts/seed-products.ts
+```
+
+6. Start the development server:
 ```bash
 npm run dev
 ```
 
-4. Open your browser and navigate to `http://localhost:5000`
+7. Open your browser and navigate to `http://localhost:5000`
 
 ## Available Scripts
 
 - `npm run dev` - Start the development server
 - `npm run build` - Build for production
 - `npm run start` - Start the production server
+- `npm run db:push` - Push database schema changes
 
-## Landing Page Sections
+## API Endpoints
 
-The landing page includes the following sections:
+### Authentication
+- `GET /api/login` - Initiate login flow
+- `GET /api/logout` - Log out user
+- `GET /api/auth/user` - Get current user
 
-1. **Hero Section** - Main value proposition with CTA
-2. **How It Works** - 3-step process explanation
-3. **Featured Themes** - Showcase of 4 popular party themes
-4. **Example Moodboard** - Sample AI-generated output
-5. **Party Showcase** - Full-width image banner with social proof
-6. **Testimonials** - Customer reviews and feedback
-7. **Pricing** - Free trial offer and feature list
-8. **FAQ** - Frequently asked questions
-9. **Footer** - Navigation and contact information
+### Theme Generation
+- `POST /api/generate-theme` - Generate AI party theme (requires subscription)
+
+### Favorites
+- `GET /api/favorites` - Get user's favorite themes
+- `POST /api/favorites` - Add theme to favorites
+- `DELETE /api/favorites/:id` - Remove from favorites
+
+### Subscription
+- `GET /api/subscription/status` - Get subscription status
+- `POST /api/subscription/create-checkout` - Create Stripe checkout session
+- `POST /api/subscription/create-portal` - Create billing portal session
+- `POST /api/stripe/webhook/:uuid` - Stripe webhook endpoint
 
 ## Design System
 
@@ -107,19 +152,11 @@ Party Bloom uses a custom color palette:
 - **Yellow**: (#FACC15)
 
 The design follows modern SaaS marketing conventions with:
+- Mobile-first responsive design
 - Clean card-based layouts
 - Generous whitespace
-- Mobile-first responsive design
 - Subtle hover animations
 - Accessible color contrasts
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## License
 
@@ -131,3 +168,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Tailwind CSS](https://tailwindcss.com/) for utility-first styling
 - [Lucide Icons](https://lucide.dev/) for the icon set
 - [Radix UI](https://www.radix-ui.com/) for accessible primitives
+- [OpenAI](https://openai.com/) for AI capabilities
+- [Stripe](https://stripe.com/) for payment processing
