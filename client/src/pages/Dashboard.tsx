@@ -472,9 +472,29 @@ export default function Dashboard() {
                               <p className="text-sm font-medium mb-2">Decoration Items</p>
                               <div className="space-y-2">
                                 {favorite.decorItems.map((item: any, i: number) => (
-                                  <div key={i} className="flex items-center justify-between text-sm">
-                                    <span>{item.name}</span>
-                                    <span className="text-muted-foreground">{item.priceRange}</span>
+                                  <div
+                                    key={i}
+                                    className="flex items-center justify-between py-2 border-b last:border-0"
+                                    data-testid={`favorite-decor-item-${favorite.id}-${i}`}
+                                  >
+                                    <div>
+                                      <p className="text-sm font-medium">{item.name}</p>
+                                      <p className="text-xs text-muted-foreground">{item.retailer}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-semibold text-primary">{item.priceRange}</span>
+                                      {item.link && (
+                                        <a
+                                          href={item.link}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-muted-foreground hover:text-foreground"
+                                          data-testid={`favorite-link-item-${favorite.id}-${i}`}
+                                        >
+                                          <ExternalLink className="h-4 w-4" />
+                                        </a>
+                                      )}
+                                    </div>
                                   </div>
                                 ))}
                               </div>
