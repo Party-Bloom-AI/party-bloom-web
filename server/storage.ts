@@ -1,10 +1,13 @@
 import {
   users,
   favorites,
+  subscriptions,
   type User,
   type UpsertUser,
   type InsertFavorite,
   type Favorite,
+  type Subscription,
+  type InsertSubscription,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -12,10 +15,15 @@ import { eq, desc } from "drizzle-orm";
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUserStripeCustomerId(userId: string, stripeCustomerId: string): Promise<User | undefined>;
   getFavorites(userId: string): Promise<Favorite[]>;
   getFavorite(id: number, userId: string): Promise<Favorite | undefined>;
   createFavorite(favorite: InsertFavorite): Promise<Favorite>;
   deleteFavorite(id: number, userId: string): Promise<boolean>;
+  getSubscription(userId: string): Promise<Subscription | undefined>;
+  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
+  updateSubscription(userId: string, updates: Partial<InsertSubscription>): Promise<Subscription | undefined>;
+  updateSubscriptionByStripeId(stripeSubscriptionId: string, updates: Partial<InsertSubscription>): Promise<Subscription | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -73,6 +81,49 @@ export class DatabaseStorage implements IStorage {
     }
     await db.delete(favorites).where(eq(favorites.id, id));
     return true;
+  }
+
+  async updateUserStripeCustomerId(userId: string, stripeCustomerId: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ stripeCustomerId, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async getSubscription(userId: string): Promise<Subscription | undefined> {
+    const [subscription] = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId));
+    return subscription;
+  }
+
+  async createSubscription(subscriptionData: InsertSubscription): Promise<Subscription> {
+    const [subscription] = await db
+      .insert(subscriptions)
+      .values(subscriptionData)
+      .returning();
+    return subscription;
+  }
+
+  async updateSubscription(userId: string, updates: Partial<InsertSubscription>): Promise<Subscription | undefined> {
+    const [subscription] = await db
+      .update(subscriptions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(subscriptions.userId, userId))
+      .returning();
+    return subscription;
+  }
+
+  async updateSubscriptionByStripeId(stripeSubscriptionId: string, updates: Partial<InsertSubscription>): Promise<Subscription | undefined> {
+    const [subscription] = await db
+      .update(subscriptions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId))
+      .returning();
+    return subscription;
   }
 }
 
