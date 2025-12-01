@@ -4,7 +4,20 @@ import ws from "ws";
 import * as schema from "@shared/schema";
 import { sql } from "drizzle-orm";
 
+// Configure WebSocket for Neon serverless - required for non-browser environments
 neonConfig.webSocketConstructor = ws;
+
+// Detect if we're connecting to Neon or standard PostgreSQL
+const isNeonDatabase = process.env.DATABASE_URL?.includes('neon.tech') || 
+                       process.env.DATABASE_URL?.includes('neon.') ||
+                       process.env.PGHOST?.includes('neon');
+
+// For non-Neon databases, we need to disable WebSocket pooling
+if (!isNeonDatabase) {
+  neonConfig.useSecureWebSocket = false;
+  neonConfig.pipelineTLS = false;
+  neonConfig.pipelineConnect = false;
+}
 
 if (!process.env.DATABASE_URL) {
   throw new Error(

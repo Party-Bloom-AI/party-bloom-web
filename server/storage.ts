@@ -33,6 +33,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    const userId = userData.id;
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+    
     // First check if a user with this email already exists (handles migration from old auth)
     if (userData.email) {
       const [existingUserByEmail] = await db
@@ -40,12 +45,12 @@ export class DatabaseStorage implements IStorage {
         .from(users)
         .where(eq(users.email, userData.email));
       
-      if (existingUserByEmail && existingUserByEmail.id !== userData.id) {
-        // Update existing user with new Clerk ID and data
+      if (existingUserByEmail && existingUserByEmail.id !== userId) {
+        // User exists with different ID - update their data but keep original ID
+        // (Don't change primary key as it causes issues with foreign keys)
         const [updatedUser] = await db
           .update(users)
           .set({
-            id: userData.id,
             firstName: userData.firstName ?? existingUserByEmail.firstName,
             lastName: userData.lastName ?? existingUserByEmail.lastName,
             profileImageUrl: userData.profileImageUrl ?? existingUserByEmail.profileImageUrl,
@@ -57,19 +62,40 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    // Normal upsert by ID
-    const [user] = await db
+    // Check if user already exists by ID
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (existingUser) {
+      // Update existing user - only set defined values
+      const updateData: Record<string, any> = { updatedAt: new Date() };
+      if (userData.email !== undefined) updateData.email = userData.email;
+      if (userData.firstName !== undefined) updateData.firstName = userData.firstName;
+      if (userData.lastName !== undefined) updateData.lastName = userData.lastName;
+      if (userData.profileImageUrl !== undefined) updateData.profileImageUrl = userData.profileImageUrl;
+      
+      const [updatedUser] = await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, userId))
+        .returning();
+      return updatedUser;
+    }
+    
+    // Insert new user
+    const [newUser] = await db
       .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
+      .values({
+        id: userId,
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        profileImageUrl: userData.profileImageUrl,
       })
       .returning();
-    return user;
+    return newUser;
   }
 
   async getFavorites(userId: string): Promise<Favorite[]> {

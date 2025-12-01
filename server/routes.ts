@@ -36,12 +36,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = auth.userId!;
       const { email, firstName, lastName, imageUrl } = req.body;
       
+      console.log("[sync-user] Syncing user:", { userId, email, firstName, lastName });
       await syncClerkUser(userId, email, firstName, lastName, imageUrl);
       const user = await storage.getUser(userId);
+      
+      if (!user) {
+        // If user wasn't found after sync, try getting by email
+        console.log("[sync-user] User not found by ID after sync, this might be a migrated user");
+      }
+      
       res.json(user);
-    } catch (error) {
-      console.error("Error syncing user:", error);
-      res.status(500).json({ message: "Failed to sync user" });
+    } catch (error: any) {
+      console.error("[sync-user] Error syncing user:", {
+        message: error?.message,
+        code: error?.code,
+        detail: error?.detail,
+        stack: error?.stack?.split('\n').slice(0, 5).join('\n'),
+      });
+      res.status(500).json({ message: "Failed to sync user", error: error?.message });
     }
   });
 
