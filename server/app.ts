@@ -8,8 +8,7 @@ import express, {
 } from "express";
 
 import { registerRoutes } from "./routes";
-import { runMigrations } from 'stripe-replit-sync';
-import { getStripeSync } from "./stripeClient";
+import { getStripeSync, isOnReplit, getStripeClient } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
 import { ensureTablesExist } from "./db";
 
@@ -32,30 +31,40 @@ async function initStripe() {
   }
 
   try {
-    log('Initializing Stripe schema...', 'stripe');
-    await runMigrations({ databaseUrl });
-    log('Stripe schema ready', 'stripe');
+    if (isOnReplit()) {
+      const { runMigrations } = await import('stripe-replit-sync');
+      log('Initializing Stripe schema...', 'stripe');
+      await runMigrations({ databaseUrl });
+      log('Stripe schema ready', 'stripe');
 
-    const stripeSync = await getStripeSync();
+      const stripeSync = await getStripeSync();
 
-    log('Setting up managed webhook...', 'stripe');
-    const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
-    const { webhook, uuid } = await stripeSync.findOrCreateManagedWebhook(
-      `${webhookBaseUrl}/api/stripe/webhook`,
-      {
-        enabled_events: ['*'],
-        description: 'Managed webhook for Party Bloom Stripe sync',
+      if (stripeSync) {
+        log('Setting up managed webhook...', 'stripe');
+        const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+        const { webhook, uuid } = await stripeSync.findOrCreateManagedWebhook(
+          `${webhookBaseUrl}/api/stripe/webhook`,
+          {
+            enabled_events: ['*'],
+            description: 'Managed webhook for Party Bloom Stripe sync',
+          }
+        );
+        log(`Webhook configured: ${webhook.url}`, 'stripe');
+
+        stripeSync.syncBackfill()
+          .then(() => {
+            log('Stripe data synced', 'stripe');
+          })
+          .catch((err: any) => {
+            console.error('Error syncing Stripe data:', err);
+          });
       }
-    );
-    log(`Webhook configured: ${webhook.url}`, 'stripe');
-
-    stripeSync.syncBackfill()
-      .then(() => {
-        log('Stripe data synced', 'stripe');
-      })
-      .catch((err: any) => {
-        console.error('Error syncing Stripe data:', err);
-      });
+    } else {
+      log('Running outside Replit - using direct Stripe API', 'stripe');
+      const stripe = await getStripeClient();
+      const account = await stripe.accounts.retrieve();
+      log(`Stripe connected: ${account.id}`, 'stripe');
+    }
   } catch (error) {
     console.error('Failed to initialize Stripe:', error);
   }
@@ -88,6 +97,34 @@ app.post(
 
       const { uuid } = req.params;
       await WebhookHandlers.processWebhook(req.body as Buffer, sig, uuid);
+
+      res.status(200).json({ received: true });
+    } catch (error: any) {
+      console.error('Webhook error:', error.message);
+      res.status(400).json({ error: 'Webhook processing error' });
+    }
+  }
+);
+
+app.post(
+  '/api/stripe/webhook/external',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const signature = req.headers['stripe-signature'];
+
+    if (!signature) {
+      return res.status(400).json({ error: 'Missing stripe-signature' });
+    }
+
+    try {
+      const sig = Array.isArray(signature) ? signature[0] : signature;
+
+      if (!Buffer.isBuffer(req.body)) {
+        console.error('STRIPE WEBHOOK ERROR: req.body is not a Buffer');
+        return res.status(500).json({ error: 'Webhook processing error' });
+      }
+
+      await WebhookHandlers.processWebhook(req.body as Buffer, sig, 'external');
 
       res.status(200).json({ received: true });
     } catch (error: any) {

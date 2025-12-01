@@ -1,8 +1,14 @@
 import Stripe from 'stripe';
 
 let connectionSettings: any;
+let cachedSecretKey: string | null = null;
+let cachedPublishableKey: string | null = null;
 
-async function getCredentials() {
+function isOnReplit(): boolean {
+  return !!(process.env.REPL_IDENTITY || process.env.WEB_REPL_RENEWAL);
+}
+
+async function getReplitCredentials() {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? 'repl ' + process.env.REPL_IDENTITY
@@ -44,6 +50,24 @@ async function getCredentials() {
   };
 }
 
+async function getCredentials() {
+  if (isOnReplit()) {
+    return getReplitCredentials();
+  }
+  
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY || process.env.VITE_STRIPE_PUBLISHABLE_KEY;
+  
+  if (!secretKey) {
+    throw new Error('STRIPE_SECRET_KEY environment variable is required for external deployment');
+  }
+  
+  return {
+    publishableKey: publishableKey || '',
+    secretKey,
+  };
+}
+
 export async function getUncachableStripeClient() {
   const { secretKey } = await getCredentials();
 
@@ -53,18 +77,28 @@ export async function getUncachableStripeClient() {
 }
 
 export async function getStripePublishableKey() {
-  const { publishableKey } = await getCredentials();
-  return publishableKey;
+  if (!cachedPublishableKey) {
+    const { publishableKey } = await getCredentials();
+    cachedPublishableKey = publishableKey;
+  }
+  return cachedPublishableKey;
 }
 
-export async function getStripeSecretKey() {
-  const { secretKey } = await getCredentials();
-  return secretKey;
+export async function getStripeSecretKey(): Promise<string> {
+  if (!cachedSecretKey) {
+    const { secretKey } = await getCredentials();
+    cachedSecretKey = secretKey;
+  }
+  return cachedSecretKey!;
 }
 
 let stripeSync: any = null;
 
 export async function getStripeSync() {
+  if (!isOnReplit()) {
+    return null;
+  }
+  
   if (!stripeSync) {
     const { StripeSync } = await import('stripe-replit-sync');
     const secretKey = await getStripeSecretKey();
@@ -79,3 +113,12 @@ export async function getStripeSync() {
   }
   return stripeSync;
 }
+
+export async function getStripeClient(): Promise<Stripe> {
+  const secretKey = await getStripeSecretKey();
+  return new Stripe(secretKey, {
+    apiVersion: '2025-08-27.basil',
+  });
+}
+
+export { isOnReplit };

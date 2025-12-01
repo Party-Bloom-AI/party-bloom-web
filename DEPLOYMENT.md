@@ -71,8 +71,9 @@ Click on your web service → **Variables** tab → Add these:
 | `CLERK_SECRET_KEY` | Your Clerk secret key (sk_...) |
 | `SESSION_SECRET` | Random 32+ char string |
 | `NODE_ENV` | `production` |
-| `STRIPE_SECRET_KEY` | Your Stripe secret key |
-| `VITE_STRIPE_PUBLIC_KEY` | Your Stripe publishable key |
+| `STRIPE_SECRET_KEY` | Your Stripe secret key (sk_live_... or sk_test_...) |
+| `STRIPE_PUBLISHABLE_KEY` | Your Stripe publishable key (pk_live_... or pk_test_...) |
+| `STRIPE_WEBHOOK_SECRET` | Webhook signing secret from Step 9 (whsec_...) |
 
 **Note:** `DATABASE_URL` is automatically set by Railway when you add PostgreSQL.
 
@@ -94,11 +95,21 @@ In your Clerk Dashboard → **Configure** → **Paths**:
 2. Wait for build to complete (2-3 minutes)
 3. Get your URL from the **Settings** tab (e.g., `party-bloom-production.up.railway.app`)
 
-### Step 9: Update Stripe Webhook
+### Step 9: Configure Stripe Webhook
 
 1. Go to Stripe Dashboard → **Developers** → **Webhooks**
-2. Add new endpoint: `https://YOUR_RAILWAY_URL/api/stripe/webhook`
-3. Select events: `checkout.session.completed`, `customer.subscription.*`
+2. Click **"Add endpoint"**
+3. Enter endpoint URL: `https://YOUR_RAILWAY_URL/api/stripe/webhook/external`
+4. Select events to listen:
+   - `checkout.session.completed`
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+   - `invoice.payment_succeeded`
+   - `invoice.payment_failed`
+5. Click **"Add endpoint"**
+6. Copy the **"Signing secret"** (starts with `whsec_`)
+7. Add it to Railway as `STRIPE_WEBHOOK_SECRET`
 
 ---
 
@@ -145,7 +156,8 @@ In the web service settings, add:
 | `SESSION_SECRET` | Random 32+ char string |
 | `NODE_ENV` | `production` |
 | `STRIPE_SECRET_KEY` | Your Stripe secret key |
-| `VITE_STRIPE_PUBLIC_KEY` | Your Stripe publishable key |
+| `STRIPE_PUBLISHABLE_KEY` | Your Stripe publishable key |
+| `STRIPE_WEBHOOK_SECRET` | Webhook signing secret (whsec_...) |
 
 ### Step 6: Configure Clerk
 
@@ -155,9 +167,10 @@ In Clerk Dashboard, add your Render URL to allowed origins.
 
 Click **"Create Web Service"** and wait for deployment.
 
-### Step 8: Update Stripe Webhook
+### Step 8: Configure Stripe Webhook
 
-Same as Railway Step 9, but use your Render URL.
+Same as Railway Step 9, but use your Render URL:
+`https://YOUR_RENDER_URL/api/stripe/webhook/external`
 
 ---
 
@@ -207,7 +220,8 @@ fly secrets set CLERK_SECRET_KEY=sk_live_xxx
 fly secrets set SESSION_SECRET=your-random-secret
 fly secrets set NODE_ENV=production
 fly secrets set STRIPE_SECRET_KEY=sk_live_xxx
-fly secrets set VITE_STRIPE_PUBLIC_KEY=pk_live_xxx
+fly secrets set STRIPE_PUBLISHABLE_KEY=pk_live_xxx
+fly secrets set STRIPE_WEBHOOK_SECRET=whsec_xxx
 ```
 
 ### Step 5: Configure Clerk
