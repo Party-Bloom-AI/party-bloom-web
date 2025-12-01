@@ -10,7 +10,7 @@ import {
   type InsertSubscription,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, or } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -33,6 +33,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // First check if a user with this email already exists (handles migration from old auth)
+    if (userData.email) {
+      const [existingUserByEmail] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, userData.email));
+      
+      if (existingUserByEmail && existingUserByEmail.id !== userData.id) {
+        // Update existing user with new Clerk ID and data
+        const [updatedUser] = await db
+          .update(users)
+          .set({
+            id: userData.id,
+            firstName: userData.firstName ?? existingUserByEmail.firstName,
+            lastName: userData.lastName ?? existingUserByEmail.lastName,
+            profileImageUrl: userData.profileImageUrl ?? existingUserByEmail.profileImageUrl,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.email, userData.email))
+          .returning();
+        return updatedUser;
+      }
+    }
+    
+    // Normal upsert by ID
     const [user] = await db
       .insert(users)
       .values(userData)
