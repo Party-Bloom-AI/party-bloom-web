@@ -14,8 +14,8 @@ import SubscriptionCancel from "@/pages/SubscriptionCancel";
 import Billing from "@/pages/Billing";
 import NotFound from "@/pages/not-found";
 
-function ProtectedRoute({ component: Component, requireSubscription = true }: { component: React.ComponentType; requireSubscription?: boolean }) {
-  const { isAuthenticated, isLoading, hasSubscription } = useAuth();
+function ProtectedRoute({ component: Component, requireAccess = true }: { component: React.ComponentType; requireAccess?: boolean }) {
+  const { isAuthenticated, isLoading, hasAccess } = useAuth();
 
   if (isLoading) {
     return (
@@ -29,7 +29,8 @@ function ProtectedRoute({ component: Component, requireSubscription = true }: { 
     return <Redirect to="/auth" />;
   }
 
-  if (requireSubscription && !hasSubscription) {
+  // Users without access (trial expired + no subscription) go to subscription page
+  if (requireAccess && !hasAccess) {
     return <Redirect to="/subscription" />;
   }
 
@@ -37,7 +38,7 @@ function ProtectedRoute({ component: Component, requireSubscription = true }: { 
 }
 
 function SubscriptionRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, isLoading, hasSubscription } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -51,10 +52,8 @@ function SubscriptionRoute({ component: Component }: { component: React.Componen
     return <Redirect to="/auth" />;
   }
 
-  if (hasSubscription) {
-    return <Redirect to="/app" />;
-  }
-
+  // Allow all authenticated users to see subscription page
+  // The page itself will handle showing appropriate content based on trial/subscription status
   return <Component />;
 }
 
