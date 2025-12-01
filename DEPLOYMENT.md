@@ -269,8 +269,180 @@ After deploying to any platform:
 
 ---
 
+## Option 4: Netlify
+
+Netlify requires converting the Express backend to serverless functions. This is more complex but works well for production.
+
+### Important Note
+
+Netlify doesn't run traditional Node.js servers. You need:
+1. An **external PostgreSQL database** (Neon is free and recommended)
+2. Convert Express routes to **Netlify Functions**
+
+### Step 1: Create a Neon Database (Free)
+
+1. Go to [neon.tech](https://neon.tech) and sign up
+2. Create a new project
+3. Copy the connection string (DATABASE_URL)
+
+### Step 2: Push to GitHub
+
+1. Create a new repository on GitHub.com
+2. Push your Party Bloom code to GitHub
+
+### Step 3: Create `netlify.toml`
+
+Create this file in your project root:
+
+```toml
+[build]
+  command = "npm run build"
+  publish = "dist/public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["shared/**"]
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+```
+
+### Step 4: Create Netlify Function
+
+Create `netlify/functions/api.ts`:
+
+```typescript
+import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
+import express from "express";
+import serverless from "serverless-http";
+import session from "express-session";
+import passport from "passport";
+import connectPg from "connect-pg-simple";
+import { registerRoutes } from "../../server/routes";
+
+const app = express();
+
+// Trust proxy for secure cookies
+app.set("trust proxy", 1);
+
+// Body parsing
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+// Session setup
+const sessionTtl = 7 * 24 * 60 * 60 * 1000;
+const pgStore = connectPg(session);
+const sessionStore = new pgStore({
+  conString: process.env.DATABASE_URL,
+  createTableIfMissing: true,
+  ttl: sessionTtl,
+  tableName: "sessions",
+});
+
+app.use(session({
+  secret: process.env.SESSION_SECRET!,
+  store: sessionStore,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: sessionTtl,
+  },
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Register all routes
+registerRoutes(app);
+
+const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+  const serverlessHandler = serverless(app);
+  return serverlessHandler(event, context);
+};
+
+export { handler };
+```
+
+### Step 5: Install Serverless Package
+
+Add to your project:
+```bash
+npm install serverless-http @netlify/functions
+```
+
+### Step 6: Update package.json Build Script
+
+Make sure your build script builds both frontend and prepares functions:
+```json
+{
+  "scripts": {
+    "build": "vite build"
+  }
+}
+```
+
+### Step 7: Deploy to Netlify
+
+1. Go to [netlify.com](https://netlify.com) and sign up with GitHub
+2. Click **"Add new site"** → **"Import an existing project"**
+3. Select your GitHub repository
+4. Configure build settings:
+   - **Build command**: `npm run build`
+   - **Publish directory**: `dist/public`
+
+### Step 8: Set Environment Variables
+
+In Netlify Dashboard → Site Settings → Environment Variables:
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Your Neon connection string |
+| `REPL_ID` | Your Replit project ID |
+| `SESSION_SECRET` | Random 32+ char string |
+| `NODE_ENV` | `production` |
+| `STRIPE_SECRET_KEY` | Your Stripe secret key |
+| `VITE_STRIPE_PUBLIC_KEY` | Your Stripe publishable key |
+| `ISSUER_URL` | `https://replit.com/oidc` |
+
+### Step 9: Update Stripe Webhook
+
+Update your Stripe webhook URL to:
+`https://YOUR_SITE.netlify.app/api/stripe/webhook`
+
+### Step 10: Deploy
+
+Click **"Deploy site"** and wait for the build to complete.
+
+---
+
+## Netlify vs Other Platforms - Comparison
+
+| Feature | Railway/Render/Fly | Netlify |
+|---------|-------------------|---------|
+| Setup difficulty | Easy | More complex |
+| Backend type | Traditional server | Serverless functions |
+| Cold starts | No | Yes (first request slower) |
+| Database included | Yes (Railway/Render) | No (need external) |
+| Best for | Full-stack apps | Static sites + APIs |
+
+**Recommendation**: For Party Bloom, Railway or Render are simpler choices since they support traditional Express servers. Netlify works but requires more setup.
+
+---
+
 ## Need Help?
 
 - Railway: [docs.railway.app](https://docs.railway.app)
 - Render: [render.com/docs](https://render.com/docs)
 - Fly.io: [fly.io/docs](https://fly.io/docs)
+- Netlify: [docs.netlify.com](https://docs.netlify.com)
