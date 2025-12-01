@@ -37,14 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, firstName, lastName, imageUrl } = req.body;
       
       console.log("[sync-user] Syncing user:", { userId, email, firstName, lastName });
-      await syncClerkUser(userId, email, firstName, lastName, imageUrl);
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        // If user wasn't found after sync, try getting by email
-        console.log("[sync-user] User not found by ID after sync, this might be a migrated user");
-      }
-      
+      const user = await syncClerkUser(userId, email, firstName, lastName, imageUrl);
       res.json(user);
     } catch (error: any) {
       console.error("[sync-user] Error syncing user:", {

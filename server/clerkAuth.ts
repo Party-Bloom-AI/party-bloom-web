@@ -20,7 +20,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 };
 
 export async function syncClerkUser(userId: string, email: string | null, firstName: string | null, lastName: string | null, imageUrl: string | null) {
-  await storage.upsertUser({
+  return await storage.upsertUser({
     id: userId,
     email: email,
     firstName: firstName,
