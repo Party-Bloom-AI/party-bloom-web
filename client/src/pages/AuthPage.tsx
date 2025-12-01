@@ -65,9 +65,8 @@ export default function AuthPage() {
         <div className="w-full max-w-md" data-testid="card-auth">
           {isSignUp ? (
             <SignUp 
-              routing="hash"
               signInUrl="/auth"
-              afterSignUpUrl="/app"
+              forceRedirectUrl="/app"
               appearance={{
                 elements: {
                   rootBox: "w-full",
@@ -81,9 +80,8 @@ export default function AuthPage() {
             />
           ) : (
             <SignIn 
-              routing="hash"
               signUpUrl="/auth"
-              afterSignInUrl="/app"
+              forceRedirectUrl="/app"
               appearance={{
                 elements: {
                   rootBox: "w-full",
