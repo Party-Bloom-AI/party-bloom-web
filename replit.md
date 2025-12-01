@@ -91,6 +91,31 @@ Preferred communication style: Simple, everyday language.
 - CSRF protection through same-site cookie policies
 - Token refresh mechanism for maintaining long-lived sessions
 
+### Subscription & Freemium Model
+
+**Free Trial System**
+- All new users get 30 days free trial automatically (no payment info required)
+- Trial period calculated from user's `createdAt` timestamp in database
+- Users can generate unlimited themes during their free trial
+- Access status tracked via `/api/access-status` endpoint
+
+**Subscription Details**
+- Price: $20 CAD/month after trial expires
+- Payment processed via Stripe Checkout
+- No trial period on Stripe subscription (trial is handled internally)
+- Subscription required to continue generating themes after free trial
+
+**Access Control**
+- Theme generation checks both free trial status AND subscription status
+- Trial users see green banner with days remaining
+- Expired trial users redirected to subscription page
+- Active subscribers have full access
+
+**Stripe Setup Requirements**
+- Create a recurring price in Stripe: $20 CAD/month (2000 cents)
+- Product name: "Party Bloom Monthly"
+- The system looks for a price with unit_amount=2000 and currency=cad
+
 ## External Dependencies
 
 ### Third-Party Services

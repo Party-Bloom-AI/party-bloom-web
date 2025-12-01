@@ -27,8 +27,10 @@ export function useAuth() {
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
     enabled: !!user,
+    staleTime: 30000,
   });
 
+  // Compute loading state carefully
   const isLoading = userLoading || (!!user && accessLoading);
   
   // User has access if they have a free trial or active subscription
