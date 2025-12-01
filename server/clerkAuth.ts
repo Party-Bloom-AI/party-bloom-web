@@ -3,7 +3,10 @@ import type { Express, RequestHandler } from "express";
 import { storage } from "./storage";
 
 export function setupClerkAuth(app: Express) {
-  app.use(clerkMiddleware());
+  app.use(clerkMiddleware({
+    secretKey: process.env.CLERK_SECRET_KEY,
+    publishableKey: process.env.VITE_CLERK_PUBLISHABLE_KEY,
+  }));
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
