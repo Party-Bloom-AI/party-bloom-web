@@ -77,8 +77,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         limit: 10,
       });
       
-      // Find the $2 CAD monthly price (200 cents)
-      const monthlyPrice = prices.data.find(p => p.unit_amount === 200 && p.recurring?.interval === 'month');
+      // Find the $20 CAD monthly price (2000 cents)
+      const monthlyPrice = prices.data.find(p => p.unit_amount === 2000 && p.recurring?.interval === 'month');
       
       let priceId: string;
       if (monthlyPrice) {
@@ -102,9 +102,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mode: 'subscription',
         success_url: `${baseUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/subscription/cancel`,
-        subscription_data: {
-          trial_period_days: 30,
-        },
       });
 
       res.json({ url: session.url, sessionId: session.id });
@@ -199,8 +196,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check user's access status (free trial or subscription)
+  app.get("/api/access-status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const subscription = await storage.getSubscription(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if user has an active Stripe subscription
+      if (subscription && ['active', 'trialing'].includes(subscription.status)) {
+        return res.json({
+          hasAccess: true,
+          accessType: 'subscription',
+          status: subscription.status,
+          expiresAt: subscription.currentPeriodEnd,
+        });
+      }
+
+      // Check if user is within their free trial period (30 days from account creation)
+      const accountCreatedAt = user.createdAt ? new Date(user.createdAt) : new Date();
+      const trialEndDate = new Date(accountCreatedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const now = new Date();
+      const daysRemaining = Math.max(0, Math.ceil((trialEndDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
+
+      if (now < trialEndDate) {
+        return res.json({
+          hasAccess: true,
+          accessType: 'free_trial',
+          trialEndsAt: trialEndDate.toISOString(),
+          daysRemaining,
+        });
+      }
+
+      // Trial expired and no active subscription
+      return res.json({
+        hasAccess: false,
+        accessType: 'expired',
+        trialEndedAt: trialEndDate.toISOString(),
+        requiresSubscription: true,
+      });
+    } catch (error) {
+      console.error("Error checking access status:", error);
+      res.status(500).json({ message: "Failed to check access status" });
+    }
+  });
+
   app.post("/api/generate-theme", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      
+      // Check user access (free trial or active subscription)
+      const user = await storage.getUser(userId);
+      const subscription = await storage.getSubscription(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check for active subscription first
+      const hasActiveSubscription = subscription && ['active', 'trialing'].includes(subscription.status);
+      
+      // Check for free trial period (30 days from account creation)
+      const accountCreatedAt = user.createdAt ? new Date(user.createdAt) : new Date();
+      const trialEndDate = new Date(accountCreatedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const isInFreeTrial = new Date() < trialEndDate;
+
+      if (!hasActiveSubscription && !isInFreeTrial) {
+        return res.status(403).json({
+          message: "Your free trial has ended. Please subscribe to continue generating themes.",
+          requiresSubscription: true,
+        });
+      }
+
       const { prompt, inspirationType, inspirationContent } = req.body;
 
       if (!prompt && !inspirationContent) {
