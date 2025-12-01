@@ -11,6 +11,7 @@ import { registerRoutes } from "./routes";
 import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
+import { ensureTablesExist } from "./db";
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -62,7 +63,10 @@ async function initStripe() {
 
 export const app = express();
 
-initStripe();
+// Ensure database tables exist (especially in production)
+ensureTablesExist().then(() => {
+  initStripe();
+});
 
 app.post(
   '/api/stripe/webhook/:uuid',
