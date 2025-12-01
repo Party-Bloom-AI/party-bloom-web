@@ -72,7 +72,7 @@ const presetThemes = [
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
-  const { user, hasSubscription, isInFreeTrial, trialDaysRemaining } = useAuth();
+  const { user, hasAccess, isInFreeTrial, trialDaysRemaining } = useAuth();
   const { toast } = useToast();
   const [promptText, setPromptText] = useState("");
   const [inspirationType, setInspirationType] = useState<"template" | "upload">("template");
@@ -666,7 +666,7 @@ export default function Dashboard() {
               size="lg"
               className="w-full text-lg py-6 h-auto gap-2"
               onClick={handleGenerate}
-              disabled={!hasSubscription || !canGenerate || generateMutation.isPending}
+              disabled={!hasAccess || !canGenerate || generateMutation.isPending}
               data-testid="button-generate"
             >
               {generateMutation.isPending ? (
