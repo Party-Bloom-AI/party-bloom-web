@@ -21,7 +21,7 @@ Party Bloom transforms the overwhelming task of party planning into a simple, en
   - Unicorn
   - Superhero
   - Garden
-- **Subscription Model** - $20 CAD/month with 30-day free trial (payment info required upfront)
+- **Freemium Model** - 30-day free trial (no payment info required), then $20 CAD/month
 - **Billing Portal** - Manage subscription through Stripe customer portal
 
 ## Tech Stack
@@ -33,9 +33,9 @@ Party Bloom transforms the overwhelming task of party planning into a simple, en
 - **Backend**: Express.js
 - **Build Tool**: Vite
 - **Database**: PostgreSQL with Drizzle ORM
-- **AI**: OpenAI GPT-5 for theme generation, GPT-Image-1 for image generation
-- **Payments**: Stripe (subscriptions, trials, billing portal)
-- **Authentication**: Replit Auth (OpenID Connect)
+- **AI**: OpenAI GPT-4o for theme generation, DALL-E 3 for image generation
+- **Payments**: Stripe (subscriptions, billing portal)
+- **Authentication**: Clerk (supports Google, GitHub, Apple, Microsoft, and email/password)
 
 ## Project Structure
 
@@ -53,12 +53,10 @@ Party Bloom transforms the overwhelming task of party planning into a simple, en
 │   ├── index.ts            # Server entry point
 │   ├── routes.ts           # API routes
 │   ├── storage.ts          # Data storage interface
-│   ├── webhookHandlers.ts  # Stripe webhook handlers
+│   ├── clerkAuth.ts        # Clerk authentication setup
 │   └── vite.ts             # Vite dev server setup
 ├── shared/                 # Shared types and schemas
 │   └── schema.ts           # Database schema and types
-├── scripts/                # Utility scripts
-│   └── seed-products.ts    # Stripe product seeding
 └── attached_assets/        # Static assets and images
 ```
 
@@ -66,11 +64,15 @@ Party Bloom transforms the overwhelming task of party planning into a simple, en
 
 The following environment variables are required:
 
-- `DATABASE_URL` - PostgreSQL connection string
-- `SESSION_SECRET` - Session encryption secret
-- `STRIPE_SECRET_KEY` - Stripe API secret key
-- `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret
-- `OPENAI_API_KEY` - OpenAI API key (via AI integration)
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key (starts with `pk_`) |
+| `CLERK_SECRET_KEY` | Clerk secret key (starts with `sk_`) |
+| `SESSION_SECRET` | Session encryption secret (32+ characters) |
+| `STRIPE_SECRET_KEY` | Stripe API secret key |
+| `VITE_STRIPE_PUBLIC_KEY` | Stripe publishable key |
+| `OPENAI_API_KEY` | OpenAI API key (via AI integration) |
 
 ## Getting Started
 
@@ -79,6 +81,7 @@ The following environment variables are required:
 - Node.js 18 or higher
 - npm or yarn
 - PostgreSQL database
+- Clerk account (free tier available at [clerk.com](https://clerk.com))
 - Stripe account
 - OpenAI API access
 
@@ -95,16 +98,17 @@ cd party-bloom
 npm install
 ```
 
-3. Set up environment variables (see Environment Variables section)
+3. Set up Clerk:
+   - Create an account at [clerk.com](https://clerk.com)
+   - Create a new application
+   - Copy your Publishable Key and Secret Key
+   - Enable desired social login providers (Google, GitHub, etc.)
 
-4. Push database schema:
+4. Set up environment variables (see Environment Variables section)
+
+5. Push database schema:
 ```bash
 npm run db:push
-```
-
-5. Seed Stripe products:
-```bash
-npx tsx scripts/seed-products.ts
 ```
 
 6. Start the development server:
@@ -124,12 +128,11 @@ npm run dev
 ## API Endpoints
 
 ### Authentication
-- `GET /api/login` - Initiate login flow
-- `GET /api/logout` - Log out user
-- `GET /api/auth/user` - Get current user
+- `POST /api/auth/sync-user` - Sync Clerk user to local database
+- `GET /api/access-status` - Get user's access status (subscription/trial)
 
 ### Theme Generation
-- `POST /api/generate-theme` - Generate AI party theme (requires subscription)
+- `POST /api/generate-theme` - Generate AI party theme (requires access)
 
 ### Favorites
 - `GET /api/favorites` - Get user's favorite themes
@@ -140,7 +143,26 @@ npm run dev
 - `GET /api/subscription/status` - Get subscription status
 - `POST /api/subscription/create-checkout` - Create Stripe checkout session
 - `POST /api/subscription/create-portal` - Create billing portal session
-- `POST /api/stripe/webhook/:uuid` - Stripe webhook endpoint
+- `POST /api/stripe/webhook` - Stripe webhook endpoint
+
+## External Deployment
+
+Party Bloom can be deployed for free outside of Replit. Supported platforms include:
+
+- **Railway** (recommended) - $5 free credit/month
+- **Render** - Free tier with 750 hours/month
+- **Fly.io** - Generous free tier with global deployment
+- **Netlify** - Requires serverless function conversion
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed step-by-step instructions.
+
+## Subscription Model
+
+- **Free Trial**: 30 days free for all new users (no payment info required)
+- **Paid Plan**: $20 CAD/month after trial expires
+- **Features**: Unlimited theme generations, favorites, and shopping lists
+
+The free trial is calculated from the user's account creation date. Users can subscribe anytime during or after the trial period.
 
 ## Design System
 
@@ -170,3 +192,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Radix UI](https://www.radix-ui.com/) for accessible primitives
 - [OpenAI](https://openai.com/) for AI capabilities
 - [Stripe](https://stripe.com/) for payment processing
+- [Clerk](https://clerk.com/) for authentication
