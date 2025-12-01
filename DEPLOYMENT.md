@@ -1,22 +1,23 @@
 # Party Bloom - External Deployment Guide
 
-This guide explains how to deploy Party Bloom for free outside of Replit while keeping authentication working.
+This guide explains how to deploy Party Bloom for free outside of Replit.
 
 ## How Authentication Works
 
-Party Bloom uses Replit as an OpenID Connect (OIDC) provider. This means:
-- Users can log in with **Google, GitHub, Apple, X (Twitter), or email/password**
-- The authentication is handled by Replit's servers, but your app can run anywhere
-- You don't need to set up OAuth with each provider individually
+Party Bloom uses **Clerk** for authentication. This means:
+- Users can log in with **Google, GitHub, Apple, Microsoft, or email/password**
+- Authentication is managed by Clerk's hosted service
+- Works seamlessly on any hosting platform
+- No complex OAuth setup required
 
 ## Prerequisites
 
-Before deploying, gather these values from your Replit project:
+Before deploying, you'll need:
 
-1. **REPL_ID** - Found in your Replit project's Secrets tab, or run this in the Shell:
-   ```bash
-   echo $REPL_ID
-   ```
+1. **Clerk Account** - Sign up at [clerk.com](https://clerk.com) (free tier available)
+   - Create a new application in Clerk Dashboard
+   - Get your **Publishable Key** (starts with `pk_`)
+   - Get your **Secret Key** (starts with `sk_`)
 
 2. **SESSION_SECRET** - A random 32+ character string. Generate one:
    ```bash
@@ -66,28 +67,34 @@ Click on your web service → **Variables** tab → Add these:
 
 | Variable | Value |
 |----------|-------|
-| `REPL_ID` | Your Replit project ID (from prerequisites) |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Your Clerk publishable key (pk_...) |
+| `CLERK_SECRET_KEY` | Your Clerk secret key (sk_...) |
 | `SESSION_SECRET` | Random 32+ char string |
 | `NODE_ENV` | `production` |
 | `STRIPE_SECRET_KEY` | Your Stripe secret key |
 | `VITE_STRIPE_PUBLIC_KEY` | Your Stripe publishable key |
-| `ISSUER_URL` | `https://replit.com/oidc` |
 
 **Note:** `DATABASE_URL` is automatically set by Railway when you add PostgreSQL.
 
-### Step 6: Configure Build Settings
+### Step 6: Configure Clerk Redirect URLs
+
+In your Clerk Dashboard → **Configure** → **Paths**:
+1. Add your Railway URL to **Allowed Origins**: `https://your-app.up.railway.app`
+2. Add redirect URLs for sign-in/sign-up flows
+
+### Step 7: Configure Build Settings
 
 1. Click on your service → **Settings** tab
 2. Set **Build Command**: `npm install && npm run build`
 3. Set **Start Command**: `npm run start`
 
-### Step 7: Deploy
+### Step 8: Deploy
 
 1. Click **"Deploy"**
 2. Wait for build to complete (2-3 minutes)
 3. Get your URL from the **Settings** tab (e.g., `party-bloom-production.up.railway.app`)
 
-### Step 8: Update Stripe Webhook
+### Step 9: Update Stripe Webhook
 
 1. Go to Stripe Dashboard → **Developers** → **Webhooks**
 2. Add new endpoint: `https://YOUR_RAILWAY_URL/api/stripe/webhook`
@@ -133,20 +140,24 @@ In the web service settings, add:
 | Key | Value |
 |-----|-------|
 | `DATABASE_URL` | PostgreSQL External URL from Step 3 |
-| `REPL_ID` | Your Replit project ID |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Your Clerk publishable key |
+| `CLERK_SECRET_KEY` | Your Clerk secret key |
 | `SESSION_SECRET` | Random 32+ char string |
 | `NODE_ENV` | `production` |
 | `STRIPE_SECRET_KEY` | Your Stripe secret key |
 | `VITE_STRIPE_PUBLIC_KEY` | Your Stripe publishable key |
-| `ISSUER_URL` | `https://replit.com/oidc` |
 
-### Step 6: Deploy
+### Step 6: Configure Clerk
+
+In Clerk Dashboard, add your Render URL to allowed origins.
+
+### Step 7: Deploy
 
 Click **"Create Web Service"** and wait for deployment.
 
-### Step 7: Update Stripe Webhook
+### Step 8: Update Stripe Webhook
 
-Same as Railway Step 8, but use your Render URL.
+Same as Railway Step 9, but use your Render URL.
 
 ---
 
@@ -191,21 +202,25 @@ When prompted:
 ### Step 4: Set Environment Variables
 
 ```bash
-fly secrets set REPL_ID=your-repl-id
+fly secrets set VITE_CLERK_PUBLISHABLE_KEY=pk_live_xxx
+fly secrets set CLERK_SECRET_KEY=sk_live_xxx
 fly secrets set SESSION_SECRET=your-random-secret
 fly secrets set NODE_ENV=production
 fly secrets set STRIPE_SECRET_KEY=sk_live_xxx
 fly secrets set VITE_STRIPE_PUBLIC_KEY=pk_live_xxx
-fly secrets set ISSUER_URL=https://replit.com/oidc
 ```
 
-### Step 5: Deploy
+### Step 5: Configure Clerk
+
+In Clerk Dashboard, add your Fly.io URL (`https://party-bloom.fly.dev`) to allowed origins.
+
+### Step 6: Deploy
 
 ```bash
 fly deploy
 ```
 
-### Step 6: Get Your URL
+### Step 7: Get Your URL
 
 ```bash
 fly open
@@ -215,14 +230,39 @@ Your app is at `https://party-bloom.fly.dev`
 
 ---
 
+## Clerk Dashboard Setup
+
+After deploying to any platform, configure Clerk:
+
+### 1. Add Allowed Origins
+
+In Clerk Dashboard → **Configure** → **Paths**:
+- Add your production URL (e.g., `https://party-bloom.up.railway.app`)
+
+### 2. Configure Social Login (Optional)
+
+In Clerk Dashboard → **User & Authentication** → **Social Connections**:
+- Enable Google, GitHub, Apple, or other providers
+- Follow Clerk's guide for each provider's OAuth setup
+
+### 3. Customize Appearance (Optional)
+
+In Clerk Dashboard → **Customization**:
+- Upload your logo
+- Match colors to Party Bloom's theme
+- Customize email templates
+
+---
+
 ## Post-Deployment Checklist
 
 After deploying to any platform:
 
 1. **Test Authentication**
    - Visit your deployed URL
-   - Click "Log In"
-   - Verify you can sign in with Google/GitHub/etc.
+   - Click "Sign In"
+   - Verify you can sign in with email or social login
+   - Check that user data syncs correctly
 
 2. **Test Stripe**
    - Create a test account
@@ -241,9 +281,14 @@ After deploying to any platform:
 
 ## Troubleshooting
 
+### "Clerk is not configured" error
+- Verify `VITE_CLERK_PUBLISHABLE_KEY` is set correctly
+- Verify `CLERK_SECRET_KEY` is set correctly
+- Check that keys match your Clerk application
+
 ### "Unauthorized" error after login
-- Verify `REPL_ID` is correctly set
-- Check that `ISSUER_URL` is `https://replit.com/oidc`
+- Check Clerk Dashboard for any errors
+- Verify your production URL is in Clerk's allowed origins
 
 ### Database connection errors
 - Verify `DATABASE_URL` is set correctly
@@ -266,6 +311,7 @@ After deploying to any platform:
 | Railway | $5/month credit | Usually enough for low traffic |
 | Render | 750 hours/month | Apps sleep after 15 min inactivity |
 | Fly.io | 3 shared VMs | Very generous for small apps |
+| Clerk | 10,000 MAU | Monthly active users on free tier |
 
 ---
 
@@ -323,9 +369,6 @@ Create `netlify/functions/api.ts`:
 import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
 import express from "express";
 import serverless from "serverless-http";
-import session from "express-session";
-import passport from "passport";
-import connectPg from "connect-pg-simple";
 import { registerRoutes } from "../../server/routes";
 
 const app = express();
@@ -337,33 +380,7 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session setup
-const sessionTtl = 7 * 24 * 60 * 60 * 1000;
-const pgStore = connectPg(session);
-const sessionStore = new pgStore({
-  conString: process.env.DATABASE_URL,
-  createTableIfMissing: true,
-  ttl: sessionTtl,
-  tableName: "sessions",
-});
-
-app.use(session({
-  secret: process.env.SESSION_SECRET!,
-  store: sessionStore,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: sessionTtl,
-  },
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Register all routes
+// Register all routes (Clerk middleware is set up in routes)
 registerRoutes(app);
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
@@ -408,19 +425,23 @@ In Netlify Dashboard → Site Settings → Environment Variables:
 | Variable | Value |
 |----------|-------|
 | `DATABASE_URL` | Your Neon connection string |
-| `REPL_ID` | Your Replit project ID |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Your Clerk publishable key |
+| `CLERK_SECRET_KEY` | Your Clerk secret key |
 | `SESSION_SECRET` | Random 32+ char string |
 | `NODE_ENV` | `production` |
 | `STRIPE_SECRET_KEY` | Your Stripe secret key |
 | `VITE_STRIPE_PUBLIC_KEY` | Your Stripe publishable key |
-| `ISSUER_URL` | `https://replit.com/oidc` |
 
-### Step 9: Update Stripe Webhook
+### Step 9: Configure Clerk
+
+In Clerk Dashboard, add your Netlify URL to allowed origins.
+
+### Step 10: Update Stripe Webhook
 
 Update your Stripe webhook URL to:
 `https://YOUR_SITE.netlify.app/api/stripe/webhook`
 
-### Step 10: Deploy
+### Step 11: Deploy
 
 Click **"Deploy site"** and wait for the build to complete.
 
@@ -442,6 +463,7 @@ Click **"Deploy site"** and wait for the build to complete.
 
 ## Need Help?
 
+- Clerk: [clerk.com/docs](https://clerk.com/docs)
 - Railway: [docs.railway.app](https://docs.railway.app)
 - Render: [render.com/docs](https://render.com/docs)
 - Fly.io: [fly.io/docs](https://fly.io/docs)

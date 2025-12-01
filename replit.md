@@ -4,7 +4,7 @@
 
 Party Bloom is an AI-powered party planning platform designed to help busy parents plan kids' themed birthday party decorations in under 10 minutes. The application transforms the overwhelming task of party planning into a simple, enjoyable experience by generating cohesive party themes, curated moodboards, and detailed shopping lists.
 
-The platform features AI theme generation from images or text descriptions, access to 100+ preset themes, curated moodboards with 4-6 inspiring images, and smart shopping lists with cost estimates and retailer links.
+The platform features AI theme generation from images or text descriptions, access to 8 preset themes, curated moodboards with 4 inspiring images, and smart shopping lists with cost estimates and retailer links.
 
 ## User Preferences
 
@@ -51,7 +51,7 @@ Preferred communication style: Simple, everyday language.
 
 **API Design**
 - RESTful API routes registered through `routes.ts`
-- Authentication-protected endpoints using middleware pattern
+- Authentication-protected endpoints using Clerk middleware
 - Centralized error handling with status code and message formatting
 
 ### Data Storage
@@ -63,7 +63,7 @@ Preferred communication style: Simple, everyday language.
 
 **Schema Design**
 - Users table: Stores user profiles (id, email, firstName, lastName, profileImageUrl, timestamps)
-- Sessions table: Required for Replit Auth, stores session data with expiration
+- Favorites table: Stores saved party themes per user
 - Type generation: Drizzle Zod schemas for runtime validation and TypeScript inference
 - Migration strategy: Schema changes managed through `drizzle-kit push` command
 
@@ -74,22 +74,26 @@ Preferred communication style: Simple, everyday language.
 
 ### Authentication & Authorization
 
-**Replit Auth Integration**
-- OpenID Connect (OIDC) authentication flow via Replit's identity provider
-- Passport.js strategy for session-based authentication
-- Session storage: PostgreSQL-backed sessions via `connect-pg-simple`
-- Session configuration: 7-day TTL, HTTP-only cookies, secure flag enabled
+**Clerk Authentication**
+- Clerk handles all authentication (sign-up, sign-in, user management)
+- Users can log in with Google, GitHub, Apple, Microsoft, or email/password
+- Frontend: ClerkProvider wraps the app, SignIn/SignUp components for auth pages
+- Backend: clerkMiddleware for session validation, getAuth for user info
+- UserButton component provides user menu with sign-out
+
+**Environment Variables Required**
+- `VITE_CLERK_PUBLISHABLE_KEY`: Clerk publishable key (pk_...)
+- `CLERK_SECRET_KEY`: Clerk secret key (sk_...)
 
 **User Session Management**
-- Token storage: Access tokens and refresh tokens stored in user session
-- Claims-based authorization using JWT claims from OIDC tokens
+- Clerk handles session tokens automatically
+- Backend syncs Clerk user data to local database on first API call
 - Middleware: `isAuthenticated` guard for protected routes
-- User creation: Automatic upsert on successful authentication
 
 **Security Considerations**
-- Session secrets managed via environment variables
-- CSRF protection through same-site cookie policies
-- Token refresh mechanism for maintaining long-lived sessions
+- Session management handled by Clerk's secure infrastructure
+- No need for local session storage or CSRF tokens
+- All auth tokens managed by Clerk SDK
 
 ### Subscription & Freemium Model
 
@@ -121,9 +125,9 @@ Preferred communication style: Simple, everyday language.
 ### Third-Party Services
 
 **Authentication Provider**
-- Replit OIDC service for user authentication and identity management
-- Issuer URL: Configurable via `ISSUER_URL` environment variable (defaults to https://replit.com/oidc)
-- Client identification via `REPL_ID` environment variable
+- Clerk for user authentication and identity management
+- Supports social login (Google, GitHub, Apple, Microsoft) and email/password
+- Free tier: 10,000 monthly active users
 
 **Database Service**
 - Neon serverless PostgreSQL database
@@ -165,7 +169,7 @@ Preferred communication style: Simple, everyday language.
 **Static Assets**
 - Images stored in `attached_assets/` directory
 - Vite alias `@assets` for convenient asset imports
-- Theme preview images: princess, dino, mermaid, space themes
+- Theme preview images: princess, dino, mermaid, space, safari, unicorn, superhero, garden themes
 - Moodboard examples and shopping list mockups
 - Logo and hero imagery
 
@@ -176,10 +180,10 @@ Preferred communication style: Simple, everyday language.
 
 ## External Deployment
 
-The app can be deployed outside of Replit while keeping authentication working. See `DEPLOYMENT.md` for detailed instructions.
+The app can be deployed outside of Replit. See `DEPLOYMENT.md` for detailed instructions.
 
 **Key Points:**
-- Authentication uses Replit as an OIDC provider (users log in with Google, GitHub, Apple, X, or email)
-- Works on any hosting platform (Railway, Render, Fly.io, etc.)
-- Requires REPL_ID environment variable from original Replit project
+- Authentication uses Clerk (works on any hosting platform)
+- Requires Clerk publishable key and secret key
+- Works on Railway, Render, Fly.io, Netlify, etc.
 - Cookie settings automatically adjust for production vs development
