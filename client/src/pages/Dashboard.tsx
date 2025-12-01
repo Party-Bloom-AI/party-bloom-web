@@ -1,18 +1,11 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
+import { UserButton } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -28,8 +21,6 @@ import {
   Upload,
   Sparkles,
   ExternalLink,
-  ChevronDown,
-  LogOut,
   Plus,
   Loader2,
   ImageIcon,
@@ -40,7 +31,6 @@ import {
   Heart,
   Trash2,
   ChevronRight,
-  CreditCard,
 } from "lucide-react";
 import logoImage from "@assets/logo_1764136309223.png";
 import princessTheme from "@assets/princess_1764138848730.png";
@@ -179,9 +169,6 @@ export default function Dashboard() {
     },
   });
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
-  };
 
   const compressImage = (file: File, maxWidth: number = 1024, quality: number = 0.7): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -292,10 +279,6 @@ export default function Dashboard() {
     (inspirationType === "upload" && uploadedImage) ||
     (inspirationType === "template" && selectedTemplate);
 
-  const userInitials = user?.firstName && user?.lastName 
-    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
-    : user?.email?.[0]?.toUpperCase() || "U";
-
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b">
@@ -336,38 +319,22 @@ export default function Dashboard() {
                 <span className="hidden sm:inline">New Decoration</span>
               </Button>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2 px-2" data-testid="button-user-menu">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.profileImageUrl || undefined} />
-                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                        {userInitials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium" data-testid="text-user-name">
-                      {user?.firstName ? `${user.firstName} ${user.lastName || ""}` : user?.email}
-                    </p>
-                    {user?.email && user?.firstName && (
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
-                    )}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/billing")} data-testid="button-billing">
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Billing
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} data-testid="button-logout">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Log out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <UserButton 
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    avatarBox: "h-9 w-9",
+                  }
+                }}
+              >
+                <UserButton.MenuItems>
+                  <UserButton.Action
+                    label="Billing"
+                    labelIcon={<span className="text-sm">💳</span>}
+                    onClick={() => navigate("/billing")}
+                  />
+                </UserButton.MenuItems>
+              </UserButton>
             </div>
           </div>
         </div>

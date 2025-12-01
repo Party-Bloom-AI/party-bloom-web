@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { getAuth } from "@clerk/express";
+import { setupClerkAuth, isAuthenticated, syncClerkUser } from "./clerkAuth";
 import OpenAI from "openai";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { sql } from "drizzle-orm";
@@ -13,11 +14,13 @@ const openai = new OpenAI({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  await setupAuth(app);
+  setupClerkAuth(app);
 
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const auth = getAuth(req);
+      const userId = auth.userId!;
+      
       const user = await storage.getUser(userId);
       const subscription = await storage.getSubscription(userId);
       res.json({ ...user, subscription });
@@ -27,9 +30,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/auth/sync-user", isAuthenticated, async (req: any, res) => {
+    try {
+      const auth = getAuth(req);
+      const userId = auth.userId!;
+      const { email, firstName, lastName, imageUrl } = req.body;
+      
+      await syncClerkUser(userId, email, firstName, lastName, imageUrl);
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error syncing user:", error);
+      res.status(500).json({ message: "Failed to sync user" });
+    }
+  });
+
   app.get("/api/subscription", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const auth = getAuth(req);
+      const userId = auth.userId!;
       const subscription = await storage.getSubscription(userId);
       res.json({ subscription });
     } catch (error) {
@@ -50,7 +69,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/subscription/create-checkout", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const auth = getAuth(req);
+      const userId = auth.userId!;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -70,21 +90,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateUserStripeCustomerId(userId, customerId);
       }
 
-      // Fetch active price directly from Stripe to avoid sync issues between dev/prod
       const prices = await stripe.prices.list({
         active: true,
         currency: 'cad',
         limit: 10,
       });
       
-      // Find the $20 CAD monthly price (2000 cents)
       const monthlyPrice = prices.data.find(p => p.unit_amount === 2000 && p.recurring?.interval === 'month');
       
       let priceId: string;
       if (monthlyPrice) {
         priceId = monthlyPrice.id;
       } else if (prices.data.length > 0) {
-        // Fallback to any active CAD price
         priceId = prices.data[0].id;
       } else {
         console.error("No active CAD prices found in Stripe");
@@ -113,7 +130,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/subscription/confirm", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const auth = getAuth(req);
+      const userId = auth.userId!;
       const { sessionId } = req.body;
 
       if (!sessionId) {
@@ -174,7 +192,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/subscription/create-portal", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const auth = getAuth(req);
+      const userId = auth.userId!;
       const user = await storage.getUser(userId);
       
       if (!user?.stripeCustomerId) {
@@ -196,10 +215,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Check user's access status (free trial or subscription)
   app.get("/api/access-status", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const auth = getAuth(req);
+      const userId = auth.userId!;
       const user = await storage.getUser(userId);
       const subscription = await storage.getSubscription(userId);
 
@@ -207,7 +226,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Check if user has an active Stripe subscription
       if (subscription && ['active', 'trialing'].includes(subscription.status)) {
         return res.json({
           hasAccess: true,
@@ -217,7 +235,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check if user is within their free trial period (30 days from account creation)
       const accountCreatedAt = user.createdAt ? new Date(user.createdAt) : new Date();
       const trialEndDate = new Date(accountCreatedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
       const now = new Date();
@@ -232,7 +249,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Trial expired and no active subscription
       return res.json({
         hasAccess: false,
         accessType: 'expired',
@@ -247,9 +263,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/generate-theme", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const auth = getAuth(req);
+      const userId = auth.userId!;
       
-      // Check user access (free trial or active subscription)
       const user = await storage.getUser(userId);
       const subscription = await storage.getSubscription(userId);
       
@@ -257,10 +273,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Check for active subscription first
       const hasActiveSubscription = subscription && ['active', 'trialing'].includes(subscription.status);
       
-      // Check for free trial period (30 days from account creation)
       const accountCreatedAt = user.createdAt ? new Date(user.createdAt) : new Date();
       const trialEndDate = new Date(accountCreatedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
       const isInFreeTrial = new Date() < trialEndDate;
@@ -422,7 +436,8 @@ Important:
 
   app.get("/api/favorites", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const auth = getAuth(req);
+      const userId = auth.userId;
       if (!userId) {
         console.error("Favorites error: No user ID in session");
         return res.status(401).json({ message: "User not authenticated" });
@@ -438,7 +453,8 @@ Important:
 
   app.post("/api/favorites", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const auth = getAuth(req);
+      const userId = auth.userId;
       if (!userId) {
         console.error("Favorites POST error: No user ID in session");
         return res.status(401).json({ message: "User not authenticated" });
@@ -470,7 +486,8 @@ Important:
 
   app.delete("/api/favorites/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const auth = getAuth(req);
+      const userId = auth.userId;
       if (!userId) {
         console.error("Favorites DELETE error: No user ID in session");
         return res.status(401).json({ message: "User not authenticated" });

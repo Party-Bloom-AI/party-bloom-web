@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-react";
 import { useAuth } from "@/hooks/useAuth";
 import Home from "@/pages/Home";
 import AuthPage from "@/pages/AuthPage";
@@ -13,6 +14,8 @@ import SubscriptionSuccess from "@/pages/SubscriptionSuccess";
 import SubscriptionCancel from "@/pages/SubscriptionCancel";
 import Billing from "@/pages/Billing";
 import NotFound from "@/pages/not-found";
+
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 function ProtectedRoute({ component: Component, requireAccess = true }: { component: React.ComponentType; requireAccess?: boolean }) {
   const { isAuthenticated, isLoading, hasAccess } = useAuth();
@@ -29,7 +32,6 @@ function ProtectedRoute({ component: Component, requireAccess = true }: { compon
     return <Redirect to="/auth" />;
   }
 
-  // Users without access (trial expired + no subscription) go to subscription page
   if (requireAccess && !hasAccess) {
     return <Redirect to="/subscription" />;
   }
@@ -52,8 +54,6 @@ function SubscriptionRoute({ component: Component }: { component: React.Componen
     return <Redirect to="/auth" />;
   }
 
-  // Allow all authenticated users to see subscription page
-  // The page itself will handle showing appropriate content based on trial/subscription status
   return <Component />;
 }
 
@@ -90,13 +90,28 @@ function Router() {
 }
 
 function App() {
+  if (!CLERK_PUBLISHABLE_KEY) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center">
+          <h1 className="text-xl font-bold text-destructive mb-2">Configuration Error</h1>
+          <p className="text-muted-foreground">
+            VITE_CLERK_PUBLISHABLE_KEY is not set. Please add it to your environment variables.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ClerkProvider>
   );
 }
 

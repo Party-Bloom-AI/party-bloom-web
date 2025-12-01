@@ -1,10 +1,22 @@
-import { Link } from "wouter";
+import { useEffect } from "react";
+import { Link, Redirect } from "wouter";
+import { useClerk } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sparkles, Home, PartyPopper } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import logoImage from "@assets/logo_1764136309223.png";
 
 export default function LogoutPage() {
+  const { signOut } = useClerk();
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      signOut();
+    }
+  }, [isAuthenticated, signOut]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-accent/5 to-background flex flex-col items-center justify-center p-6">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

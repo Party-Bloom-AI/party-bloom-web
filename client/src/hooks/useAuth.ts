@@ -1,8 +1,7 @@
+import { useUser, useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { useQuery } from "@tanstack/react-query";
-import type { User, Subscription } from "@shared/schema";
-import { getQueryFn } from "@/lib/queryClient";
-
-type UserWithSubscription = User & { subscription?: Subscription | null };
+import { useEffect } from "react";
+import { apiRequest } from "@/lib/queryClient";
 
 interface AccessStatus {
   hasAccess: boolean;
@@ -16,40 +15,51 @@ interface AccessStatus {
 }
 
 export function useAuth() {
-  const { data: user, isLoading: userLoading } = useQuery<UserWithSubscription | null>({
-    queryKey: ["/api/auth/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-    retry: false,
-  });
+  const { user: clerkUser, isLoaded: clerkLoaded, isSignedIn } = useUser();
+  const { getToken } = useClerkAuth();
+
+  useEffect(() => {
+    if (clerkLoaded && isSignedIn && clerkUser) {
+      apiRequest("POST", "/api/auth/sync-user", {
+        email: clerkUser.primaryEmailAddress?.emailAddress || null,
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+        imageUrl: clerkUser.imageUrl,
+      }).catch(console.error);
+    }
+  }, [clerkLoaded, isSignedIn, clerkUser]);
 
   const { data: accessStatus, isLoading: accessLoading } = useQuery<AccessStatus | null>({
     queryKey: ["/api/access-status"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-    retry: false,
-    enabled: !!user,
+    enabled: !!isSignedIn,
     staleTime: 30000,
   });
 
-  // Compute loading state carefully
-  const isLoading = userLoading || (!!user && accessLoading);
+  const isLoading = !clerkLoaded || (isSignedIn && accessLoading);
   
-  // User has access if they have a free trial or active subscription
   const hasAccess = accessStatus?.hasAccess ?? false;
   const isInFreeTrial = accessStatus?.accessType === 'free_trial';
-  const hasSubscription = accessStatus?.accessType === 'subscription' || !!user?.subscription;
-  const subscriptionStatus = user?.subscription?.status || null;
+  const hasSubscription = accessStatus?.accessType === 'subscription';
   const trialDaysRemaining = accessStatus?.daysRemaining ?? 0;
+
+  const user = clerkUser ? {
+    id: clerkUser.id,
+    email: clerkUser.primaryEmailAddress?.emailAddress || null,
+    firstName: clerkUser.firstName,
+    lastName: clerkUser.lastName,
+    profileImageUrl: clerkUser.imageUrl,
+  } : null;
 
   return {
     user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!isSignedIn,
     hasAccess,
     hasSubscription,
     isInFreeTrial,
     trialDaysRemaining,
-    subscriptionStatus,
-    subscription: user?.subscription,
+    subscriptionStatus: null,
+    subscription: null,
     accessStatus,
   };
 }
