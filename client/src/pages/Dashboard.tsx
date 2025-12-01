@@ -82,7 +82,7 @@ const presetThemes = [
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
-  const { user, hasSubscription } = useAuth();
+  const { user, hasSubscription, isInFreeTrial, trialDaysRemaining } = useAuth();
   const { toast } = useToast();
   const [promptText, setPromptText] = useState("");
   const [inspirationType, setInspirationType] = useState<"template" | "upload">("template");
@@ -102,11 +102,34 @@ export default function Dashboard() {
   const generateMutation = useMutation({
     mutationFn: async (input: { prompt: string; inspirationType: string; inspirationContent: string }) => {
       const response = await apiRequest("POST", "/api/generate-theme", input);
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.requiresSubscription) {
+          throw new Error("SUBSCRIPTION_REQUIRED");
+        }
+        throw new Error(errorData.message || "Failed to generate theme");
+      }
       return response.json();
     },
     onSuccess: (data) => {
       setResult(data);
       setSavedThemeId(null);
+    },
+    onError: (error: Error) => {
+      if (error.message === "SUBSCRIPTION_REQUIRED") {
+        toast({
+          title: "Free Trial Ended",
+          description: "Please subscribe to continue generating themes.",
+          variant: "destructive",
+        });
+        navigate("/subscription");
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to generate theme",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -306,7 +329,6 @@ export default function Dashboard() {
 
               <Button
                 onClick={handleNewDecoration}
-                disabled={!hasSubscription}
                 data-testid="button-new-decoration"
                 className="gap-2"
               >
@@ -350,6 +372,31 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* Trial Status Banner */}
+      {isInFreeTrial && (
+        <div className="bg-green-50 dark:bg-green-950/30 border-b border-green-200 dark:border-green-800">
+          <div className="max-w-7xl mx-auto px-4 md:px-6 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                <Sparkles className="h-4 w-4" />
+                <span>
+                  <strong>Free Trial:</strong> {trialDaysRemaining} days remaining
+                </span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => navigate("/subscription")}
+                className="text-green-700 dark:text-green-400 hover:text-green-800 hover:bg-green-100 dark:hover:bg-green-900/50"
+                data-testid="button-view-subscription"
+              >
+                View Plans
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         {showFavorites ? (
