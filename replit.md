@@ -173,3 +173,13 @@ Preferred communication style: Simple, everyday language.
 - Google Fonts: Architects Daughter, DM Sans, Fira Code, Geist Mono
 - Preconnect optimization for faster font loading
 - System font fallbacks configured in Tailwind
+
+## External Deployment
+
+The app can be deployed outside of Replit while keeping authentication working. See `DEPLOYMENT.md` for detailed instructions.
+
+**Key Points:**
+- Authentication uses Replit as an OIDC provider (users log in with Google, GitHub, Apple, X, or email)
+- Works on any hosting platform (Railway, Render, Fly.io, etc.)
+- Requires REPL_ID environment variable from original Replit project
+- Cookie settings automatically adjust for production vs development
